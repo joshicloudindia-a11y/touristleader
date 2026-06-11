@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TouristLeader.com ✈️
 
-## Getting Started
+A MakeMyTrip-style, fully responsive flight booking platform.
+**Make travel caring, seamless, and sustainable — Comfort before, during, and after take off.**
 
-First, run the development server:
+Built with **Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · Prisma · TiDB Cloud (MySQL)**.
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npx prisma generate
+npx prisma db push        # syncs schema to TiDB
+npm run dev               # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## What's implemented (full flight workflow)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Step | Route | Highlights |
+|------|-------|-----------|
+| Homepage | `/` | Nav tabs (Flights/Hotels/Holidays/Trains/Bus/Visa), trip-type tabs (One Way / Round Trip / Multi-City) each with info popup, **passenger-type dropdown** (Regular, Student, Senior, Disability, Mothers, Armed Forces, Medical, Minor, Group 4+) each with eligibility/benefit/document info popups, searchable airport selectors with swap, date pickers, traveller & cabin-class selector, animated **offers carousel** |
+| Search results | `/flights/search` | **Fare calendar** (±7 days, cheapest highlighted), sort (Cheapest/Fastest/Earliest/Late/Your Choice with info), full **filter panel** (airlines, stops, time, price slider, refundable), flight cards |
+| View Prices | (inline) | Expands **4 fare types** — Fee Saver / Regular / Comfort / Your Choice — with baggage, seat, meal, cancellation details |
+| Booking details | `/flights/book` | Flight summary, fare breakdown, promo code + offers, ID requirements / cancellation / wheelchair info popups |
+| Travellers | `/flights/passengers` | Per-passenger form, special-assistance, contact, tooltips, save-profile |
+| Seats | `/flights/seats` | Interactive **aircraft seat map** (available/premium/booked/selected, prices on hover, per-passenger, skip option) |
+| Meals | `/flights/meals` | Veg / Non-veg / Dry fruits / Fruit basket / Special, per-passenger, info popups |
+| Payment | `/flights/payment` | UPI / Card / Net banking / Wallet / EMI, bank offers, secure-pay |
+| Confirmation | `/flights/confirmation` | Booking ID + PNR, baggage & cancellation rules, PDF/calendar/share/invoice, **add cab** + **airport services** popups, confirmation email |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Responsive across mobile → desktop (mobile filter drawer, sticky summaries, fluid grids).
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+- `src/lib/benzy.ts` — Benzy Infotech (Akbar Travels B2B) client: **Signature → Bearer token → ExpressSearch/GetExpSearch**. Falls back to realistic generated fares until the API IP is whitelisted (see below).
+- `src/lib/mock-flights.ts` — deterministic flight + fare-calendar generator (seeded per route/date).
+- `src/lib/mailer.ts` — Gmail SMTP (nodemailer) booking confirmation email.
+- `src/lib/blob.ts` — Vercel Blob image upload/list/delete helper.
+- `src/store/booking.ts` — Zustand store (persisted) carrying selection across the booking flow.
+- `prisma/schema.prisma` — `User`, `TravellerProfile`, `Booking`, `SearchCache` on TiDB Cloud.
+- `src/app/api/flights/search` & `src/app/api/bookings` — API routes (search + create booking with DB write + email).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## ⚠️ Action items before going live
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Whitelist the deployment's static IP with Benzy** (email `apisupport@benzyinfotech.com`,
+   `Deepak@benzyinfotech.com`, cc `api@akbartravelsonline.com`, `Jyoti.varma@akbatravels.com`).
+   Until then the app serves clearly-labelled *demo fares* and live calls are skipped gracefully.
+   Once whitelisted, finish the response mapping in `normalizeBenzyFlights()` against a real
+   ExpressSearch sample from the WRC portal.
+2. **Set the real Gmail address** in `.env` → `SMTP_USER` / `MAIL_FROM`. The app password from the
+   screenshot is configured, but the matching Gmail account address is unknown — Gmail currently
+   rejects login (`535 BadCredentials`) because the username is a placeholder.
+3. **Rotate the shared secrets.** The TiDB password, Benzy credentials and Gmail app password were
+   shared in plaintext; rotate them and load via your hosting provider's secret manager.
+4. **TiDB database** uses the `test` schema (the provided `sys` is a protected system DB).
 
-## Deploy on Vercel
+## Env
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `.env.example`. Secrets live in `.env` (gitignored).

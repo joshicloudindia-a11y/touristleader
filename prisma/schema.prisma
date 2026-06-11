@@ -1,0 +1,213 @@
+// TouristLeader.com — Prisma schema (TiDB Cloud / MySQL)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+model User {
+  id           String             @id @default(cuid())
+  email        String             @unique
+  phone        String?
+  name         String?
+  role         String             @default("USER") // USER | ADMIN
+  passwordHash String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  bookings     Booking[]
+  travellers   TravellerProfile[]
+}
+
+// Saved passenger profiles for quick future bookings
+model TravellerProfile {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  fullName    String
+  dateOfBirth DateTime?
+  gender      String?
+  nationality String?  @default("Indian")
+  idType      String?
+  idNumber    String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Booking {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+  bookingRef    String   @unique // internal reference (TL...)
+  pnr           String?
+  bookingType   String   @default("FLIGHT") // FLIGHT | HOTEL
+  status        String   @default("PENDING") // PENDING | CONFIRMED | CANCELLED | FAILED
+  tripType      String   @default("ONE_WAY") // ONE_WAY | ROUND_TRIP | MULTI_CITY
+  passengerType String   @default("REGULAR")
+  fareType      String   @default("REGULAR")
+  origin        String
+  destination   String
+  departDate    DateTime
+  returnDate    DateTime?
+  cabinClass    String   @default("Economy")
+  adults        Int      @default(1)
+  children      Int      @default(0)
+  infants       Int      @default(0)
+  baseFare      Float    @default(0)
+  taxes         Float    @default(0)
+  addOns        Float    @default(0)
+  totalAmount   Float    @default(0)
+  currency      String   @default("INR")
+  paymentId     String?  // razorpay_payment_id
+  paymentOrderId String? // razorpay_order_id
+  paymentMethod String?  @default("razorpay")
+  paymentStatus String   @default("PAID")
+  contactEmail  String
+  contactPhone  String
+  // raw Benzy payloads / itinerary snapshot
+  flightData    Json?
+  passengers    Json?
+  seats         Json?
+  meals         Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([bookingRef])
+}
+
+model SupportTicket {
+  id          String          @id @default(cuid())
+  ticketNo    String          @unique
+  userId      String?
+  name        String
+  email       String
+  phone       String?
+  category    String          @default("GENERAL") // BOOKING | PAYMENT | REFUND | CANCELLATION | BAGGAGE | GENERAL
+  bookingRef  String?
+  subject     String
+  message     String          @db.Text
+  status      String          @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED | CLOSED
+  priority    String          @default("NORMAL") // LOW | NORMAL | HIGH | URGENT
+  lastReplyBy String?         // CUSTOMER | ADMIN
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  messages    TicketMessage[]
+
+  @@index([userId])
+  @@index([email])
+  @@index([ticketNo])
+}
+
+model TicketMessage {
+  id         String        @id @default(cuid())
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender     String // CUSTOMER | ADMIN
+  authorName String?
+  body       String        @db.Text
+  createdAt  DateTime      @default(now())
+
+  @@index([ticketId])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g. ADMIN, SUPPORT_AGENT
+  name        String
+  description String?
+  permissions Json // string[]
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+}
+
+model Package {
+  id                 String   @id @default(cuid())
+  slug               String   @unique
+  title              String
+  destination        String
+  country            String
+  nights             Int      @default(0)
+  days               Int      @default(0)
+  image              String
+  priceINR           Int      @default(0)
+  priceUSD           Int?
+  rating             Float    @default(4.5)
+  reviews            Int      @default(0)
+  bestTime           String?
+  overview           String   @db.Text
+  categories         Json // string[]
+  themes             Json // string[]
+  highlights         Json // string[]
+  itinerary          Json // ItineraryDay[]
+  inclusions         Json // string[]
+  exclusions         Json // string[]
+  paymentPolicy      Json // string[]
+  cancellationPolicy Json // string[]
+  childPolicy        Json // string[]
+  published          Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model PackageEnquiry {
+  id           String   @id @default(cuid())
+  enquiryNo    String   @unique
+  userId       String?
+  packageSlug  String
+  packageTitle String
+  name         String
+  email        String
+  phone        String
+  travelMonth  String?
+  adults       Int      @default(2)
+  children     Int      @default(0)
+  message      String?  @db.Text
+  status       String   @default("NEW") // NEW | CONTACTED | QUOTED | BOOKED | CLOSED
+  source       String   @default("WEB") // WEB | PHONE | WALK_IN | REFERRAL | SOCIAL
+  assignedTo   String?  // staff/agent user id
+  note         String?  @db.Text // internal agent notes
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([enquiryNo])
+  @@index([assignedTo])
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  itemType  String // HOTEL | DESTINATION | FLIGHT
+  itemKey   String // stable key (e.g. "Goa:Taj Heights" or city code)
+  title     String
+  subtitle  String?
+  image     String?
+  price     String?
+  href      String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, itemType, itemKey])
+  @@index([userId])
+}
+
+// Optional cache of search responses to reduce Benzy calls
+model SearchCache {
+  id        String   @id @default(cuid())
+  cacheKey  String   @unique
+  payload   Json
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([cacheKey])
+}
