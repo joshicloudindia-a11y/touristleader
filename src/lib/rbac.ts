@@ -66,7 +66,21 @@ export const SYSTEM_ROLE_KEYS = SYSTEM_ROLES.map((r) => r.key);
 export function hasPermission(perms: string[] | undefined, p: Permission): boolean {
   return !!perms && perms.includes(p);
 }
-/** A role grants admin-panel access if it has at least one permission. */
+/** A role grants back-office access if it has at least one permission. */
 export function grantsAdminAccess(perms: string[] | undefined): boolean {
   return !!perms && perms.length > 0;
+}
+
+/** Permissions only the admin tier holds. A role with any of these → admin (uses /admin); otherwise it's an agent (uses /agent). */
+export const ADMIN_ONLY_PERMISSIONS: Permission[] = ["packages.manage", "users.view", "users.manage", "users.manage_roles", "roles.manage"];
+
+/** Admin tier = has an admin-only permission. Agents (tickets/enquiries/bookings only) are NOT admin tier. */
+export function isAdminTier(perms: string[] | undefined): boolean {
+  return !!perms && ADMIN_ONLY_PERMISSIONS.some((p) => perms.includes(p));
+}
+/** Tier label for routing: "admin" → /admin, "agent" → /agent, "none" → no back-office. */
+export function accessTier(perms: string[] | undefined): "admin" | "agent" | "none" {
+  if (isAdminTier(perms)) return "admin";
+  if (grantsAdminAccess(perms)) return "agent";
+  return "none";
 }

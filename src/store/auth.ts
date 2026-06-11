@@ -17,7 +17,7 @@ interface AuthState {
   afterAuth: (() => void) | null;
   fetchMe: () => Promise<void>;
   sendOtp: (email: string) => Promise<{ ok: boolean; error?: string; otpToken?: string; devOtp?: string; emailed?: boolean }>;
-  verifyOtp: (data: { email: string; otp: string; otpToken: string; name?: string; phone?: string; context?: "customer" | "admin" }) => Promise<{ ok: boolean; error?: string }>;
+  verifyOtp: (data: { email: string; otp: string; otpToken: string; name?: string; phone?: string; context?: "customer" | "admin" }) => Promise<{ ok: boolean; error?: string; tier?: "admin" | "agent" | "none" }>;
   updateProfile: (data: { name: string; phone: string }) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   /** Run `action` if logged in; otherwise open the login gate and run it after a successful login. */
@@ -77,7 +77,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         const cb = get().afterAuth;
         set({ user: data.user, loading: false, gateOpen: false, afterAuth: null });
         if (cb) setTimeout(cb, 60); // continue the gated action (e.g. proceed to booking)
-        return { ok: true };
+        return { ok: true, tier: data.tier };
       }
       set({ loading: false });
       return { ok: false, error: data.error || "Invalid code" };

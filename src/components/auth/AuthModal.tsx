@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Loader2, Mail, AlertCircle, X, ArrowLeft, ShieldCheck, BadgePercent, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +12,7 @@ const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const OTP_LEN = 6;
 
 export function AuthModal({ open, onClose, reason }: { open: boolean; onClose: () => void; reason?: string }) {
+  const router = useRouter();
   const { sendOtp, verifyOtp, loading } = useAuth();
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
@@ -81,8 +83,12 @@ export function AuthModal({ open, onClose, reason }: { open: boolean; onClose: (
     const code = otp.join("");
     if (code.length !== OTP_LEN) { setError("Enter the 6-digit code"); return; }
     const res = await verifyOtp({ email: email.trim(), otp: code, otpToken, context: "customer" });
-    if (res.ok) onClose();
-    else setError(res.error || "Invalid code");
+    if (res.ok) {
+      onClose();
+      // agents work in their own console
+      const next = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null;
+      if (res.tier === "agent") router.push(next && next.startsWith("/agent") ? next : "/agent");
+    } else setError(res.error || "Invalid code");
   };
 
   return createPortal(

@@ -10,18 +10,18 @@ import { type Permission } from "@/lib/rbac";
 import { AdminSearch } from "./AdminSearch";
 import { AdminProfileMenu } from "./AdminProfileMenu";
 
-const NAV: { href: string; label: string; icon: React.ElementType; perm: Permission }[] = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard.view" },
-  { href: "/admin/bookings", label: "Bookings", icon: ReceiptText, perm: "bookings.view" },
-  { href: "/admin/packages", label: "Holiday Packages", icon: Palmtree, perm: "packages.view" },
-  { href: "/admin/enquiries", label: "Package Enquiries", icon: Ticket, perm: "enquiries.view" },
-  { href: "/admin/tickets", label: "Support Tickets", icon: LifeBuoy, perm: "tickets.view" },
-  { href: "/admin/users", label: "Users", icon: Users, perm: "users.view" },
-  { href: "/admin/roles", label: "Roles & Permissions", icon: ShieldCheck, perm: "roles.manage" },
+const NAV: { seg: string; label: string; agentLabel?: string; icon: React.ElementType; perm: Permission }[] = [
+  { seg: "", label: "Dashboard", agentLabel: "My Workspace", icon: LayoutDashboard, perm: "dashboard.view" },
+  { seg: "bookings", label: "Bookings", icon: ReceiptText, perm: "bookings.view" },
+  { seg: "packages", label: "Holiday Packages", icon: Palmtree, perm: "packages.view" },
+  { seg: "enquiries", label: "Package Enquiries", agentLabel: "Leads", icon: Ticket, perm: "enquiries.view" },
+  { seg: "tickets", label: "Support Tickets", icon: LifeBuoy, perm: "tickets.view" },
+  { seg: "users", label: "Users", icon: Users, perm: "users.view" },
+  { seg: "roles", label: "Roles & Permissions", icon: ShieldCheck, perm: "roles.manage" },
 ];
 
-interface AdminCtxValue { role: string; permissions: Permission[]; can: (p: Permission) => boolean; email: string }
-const AdminCtx = createContext<AdminCtxValue>({ role: "USER", permissions: [], can: () => false, email: "" });
+interface AdminCtxValue { role: string; permissions: Permission[]; can: (p: Permission) => boolean; email: string; basePath: string; tier: string }
+const AdminCtx = createContext<AdminCtxValue>({ role: "USER", permissions: [], can: () => false, email: "", basePath: "/admin", tier: "none" });
 export const useAdminCtx = () => useContext(AdminCtx);
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -32,10 +32,14 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
   const router = useRouter();
   const pathname = usePathname();
   const { logout } = useAuth();
+  const mode: "admin" | "agent" = pathname.startsWith("/agent") ? "agent" : "admin";
+  const basePath = mode === "agent" ? "/agent" : "/admin";
+
   const [state, setState] = useState<State>("loading");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("USER");
   const [roleName, setRoleName] = useState<string>("User");
+  const [tier, setTier] = useState<string>("none");
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [collapsed, setCollapsed] = useState(false); // desktop icons-only
   const [mobileOpen, setMobileOpen] = useState(false); // mobile drawer
@@ -52,8 +56,24 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
   const check = () =>
     fetch("/api/admin/me", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => { setEmail(d.user?.email || ""); setRole(d.role || "USER"); setRoleName(d.roleName || "User"); setPermissions(d.permissions || []); setState(d.admin ? "ok" : d.user ? "denied" : "needLogin"); })
-      .catch(() => setState("needLogin"));
+      .then((d) => {
+        setEmail(d.user?.email || ""); setRole(d.role || "USER"); setRoleName(d.roleName || "User"); setPermissions(d.permissions || []); setTier(d.tier || "none");
+        const t = d.tier || "none";
+        if (!d.user) {
+          // not logged in: admin login screen on /admin; agents log in at the home page
+          if (mode === "agent") { router.replace("/?next=/agent"); setState("loading"); }
+          else setState("needLogin");
+        } else if (t === "none") {
+          setState("denied"); // logged-in customer hit a back-office URL
+        } else if (mode === "admin" && t === "agent") {
+          router.replace("/agent"); setState("loading"); // agents don't use /admin
+        } else if (mode === "agent" && t === "admin") {
+          router.replace("/admin"); setState("loading"); // admins use /admin
+        } else {
+          setState("ok");
+        }
+      })
+      .catch(() => setState(mode === "agent" ? "denied" : "needLogin"));
 
   useEffect(() => { check(); }, []);
 
@@ -64,30 +84,33 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
   if (state === "denied") return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
       <span className="grid h-16 w-16 place-items-center rounded-2xl bg-rose-50 text-rose-500"><ShieldAlert size={30} /></span>
-      <h1 className="mt-4 text-2xl font-extrabold text-slate-900">Admin access only</h1>
-      <p className="mt-2 max-w-md text-sm text-slate-500">You&apos;re signed in as <b>{email}</b>, but this account isn&apos;t an admin. Only the Super Admin can access this panel.</p>
+      <h1 className="mt-4 text-2xl font-extrabold text-slate-900">{mode === "agent" ? "Agent access only" : "Admin access only"}</h1>
+      <p className="mt-2 max-w-md text-sm text-slate-500">You&apos;re signed in as <b>{email}</b>, but this account doesn&apos;t have {mode === "agent" ? "agent" : "admin"} access.</p>
       <div className="mt-5 flex gap-2">
-        <button onClick={async () => { await logout(); setState("needLogin"); }} className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:border-brand">Switch account</button>
+        <button onClick={async () => { await logout(); mode === "agent" ? router.replace("/") : setState("needLogin"); }} className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:border-brand">Switch account</button>
         <Link href="/" className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white">Back to site</Link>
       </div>
     </div>
   );
 
   const can = (p: Permission) => permissions.includes(p);
+  const hrefFor = (seg: string) => seg ? `${basePath}/${seg}` : basePath;
   const visibleNav = NAV.filter((n) => can(n.perm));
   const navItem = (n: typeof NAV[number]) => {
-    const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
+    const href = hrefFor(n.seg);
+    const active = pathname === href || (n.seg !== "" && pathname.startsWith(href));
+    const label = mode === "agent" && n.agentLabel ? n.agentLabel : n.label;
     return (
-      <Link key={n.href} href={n.href} title={collapsed ? n.label : undefined}
+      <Link key={href} href={href} title={collapsed ? label : undefined}
         className={cn("flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition-colors", collapsed ? "lg:justify-center lg:px-0 px-3" : "px-3",
           active ? "bg-brand/10 text-brand" : "text-slate-600 hover:bg-slate-50")}>
-        <n.icon size={18} className="shrink-0" /> <span className={cn(collapsed && "lg:hidden")}>{n.label}</span>
+        <n.icon size={18} className="shrink-0" /> <span className={cn(collapsed && "lg:hidden")}>{label}</span>
       </Link>
     );
   };
 
   return (
-    <AdminCtx.Provider value={{ role, permissions, can, email }}>
+    <AdminCtx.Provider value={{ role, permissions, can, email, basePath, tier }}>
     <div className="flex min-h-screen bg-slate-100">
       {/* Mobile overlay */}
       {mobileOpen && <div className="fixed inset-0 z-40 bg-slate-900/50 lg:hidden" onClick={() => setMobileOpen(false)} />}

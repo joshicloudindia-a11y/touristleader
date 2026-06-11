@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyOtpToken, setSessionCookie, isStaffUser } from "@/lib/auth";
+import { verifyOtpToken, setSessionCookie, accessForUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -30,18 +30,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Enforce login context: staff must use /admin, customers must use the home login.
-    const staff = await isStaffUser(user.email, user.role);
-    if (context === "customer" && staff) {
-      return NextResponse.json({ error: "This is a staff account. Please sign in from the admin panel at /admin." }, { status: 403 });
+    // Enforce login context by access tier:
+    //  - /admin login  → admins only
+    //  - / (customer)  → customers AND agents (admins must use /admin)
+    const tier = await accessForUser(user.email, user.role); // "admin" | "agent" | "none"
+    if (context === "admin" && tier !== "admin") {
+      return NextResponse.json({ error: "Only admins can sign in here. Agents and customers sign in from the home page." }, { status: 403 });
     }
-    if (context === "admin" && !staff) {
-      return NextResponse.json({ error: "This account doesn't have admin access. Please use the customer login on the home page." }, { status: 403 });
+    if (context === "customer" && tier === "admin") {
+      return NextResponse.json({ error: "This is an admin account. Please sign in from the admin panel at /admin." }, { status: 403 });
     }
 
     const { role: _role, ...safeUser } = user;
     await setSessionCookie(user.id);
-    return NextResponse.json({ user: safeUser, staff });
+    return NextResponse.json({ user: safeUser, tier });
   } catch (err) {
     console.error("[auth/otp/verify]", (err as Error).message);
     return NextResponse.json({ error: "Could not verify code" }, { status: 500 });

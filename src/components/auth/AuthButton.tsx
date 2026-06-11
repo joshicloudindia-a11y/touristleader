@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { User, ChevronDown, Ticket, LogOut, UserCircle, Heart, LifeBuoy } from "lucide-react";
+import { User, ChevronDown, Ticket, LogOut, UserCircle, Heart, LifeBuoy, Headset, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { AuthModal } from "./AuthModal";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ export function AuthButton({ variant = "outline", compact = false }: { variant?:
   const { user, fetched, fetchMe, logout } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [tier, setTier] = useState<"admin" | "agent" | "none">("none");
   const [coords, setCoords] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -21,6 +22,12 @@ export function AuthButton({ variant = "outline", compact = false }: { variant?:
   useEffect(() => {
     if (!fetched) fetchMe();
   }, [fetched, fetchMe]);
+
+  // staff get a shortcut into their console
+  useEffect(() => {
+    if (!user) { setTier("none"); return; }
+    fetch("/api/admin/me", { cache: "no-store" }).then((r) => r.json()).then((d) => setTier(d.tier || "none")).catch(() => {});
+  }, [user]);
 
   // close on outside click (button + portaled menu), and on scroll/resize
   useEffect(() => {
@@ -83,6 +90,8 @@ export function AuthButton({ variant = "outline", compact = false }: { variant?:
             <p className="truncate text-sm font-bold text-slate-900">{user.name || firstName}</p>
             <p className="truncate text-xs text-slate-400">{user.email}</p>
           </div>
+          {tier === "agent" && <MenuItem icon={Headset} label="Agent Console" onClick={() => { setMenuOpen(false); router.push("/agent"); }} />}
+          {tier === "admin" && <MenuItem icon={LayoutDashboard} label="Admin Panel" onClick={() => { setMenuOpen(false); router.push("/admin"); }} />}
           <MenuItem icon={UserCircle} label="My Account" onClick={() => { setMenuOpen(false); router.push("/account"); }} />
           <MenuItem icon={Ticket} label="My Trips" onClick={() => { setMenuOpen(false); router.push("/account/trips"); }} />
           <MenuItem icon={Heart} label="Wishlist" onClick={() => { setMenuOpen(false); router.push("/account/wishlist"); }} />

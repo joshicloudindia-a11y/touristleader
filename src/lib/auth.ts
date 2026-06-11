@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
-import { grantsAdminAccess } from "./rbac";
+import { grantsAdminAccess, accessTier } from "./rbac";
 import { resolveRole, SUPER_ADMIN_RESOLVED } from "./roles";
 
 const SECRET = process.env.AUTH_SECRET || "dev-insecure-secret-change-me";
@@ -98,19 +98,19 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
-/** Resolve the current user's RBAC role, permissions and admin status (DB-backed). */
-export async function isAdmin(): Promise<{ ok: boolean; role: string; roleName: string; permissions: string[]; user: SessionUser | null }> {
+/** Resolve the current user's RBAC role, permissions, back-office access and tier (DB-backed). */
+export async function isAdmin(): Promise<{ ok: boolean; role: string; roleName: string; permissions: string[]; tier: "admin" | "agent" | "none"; user: SessionUser | null }> {
   const user = await getSessionUser();
-  if (!user) return { ok: false, role: "USER", roleName: "User", permissions: [], user: null };
+  if (!user) return { ok: false, role: "USER", roleName: "User", permissions: [], tier: "none", user: null };
   if (ADMIN_EMAILS.includes(user.email.toLowerCase())) {
-    return { ok: true, role: SUPER_ADMIN_RESOLVED.key, roleName: SUPER_ADMIN_RESOLVED.name, permissions: SUPER_ADMIN_RESOLVED.permissions, user };
+    return { ok: true, role: SUPER_ADMIN_RESOLVED.key, roleName: SUPER_ADMIN_RESOLVED.name, permissions: SUPER_ADMIN_RESOLVED.permissions, tier: "admin", user };
   }
   try {
     const u = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } });
     const resolved = await resolveRole(u?.role || "USER");
-    return { ok: grantsAdminAccess(resolved.permissions), role: resolved.key, roleName: resolved.name, permissions: resolved.permissions, user };
+    return { ok: grantsAdminAccess(resolved.permissions), role: resolved.key, roleName: resolved.name, permissions: resolved.permissions, tier: accessTier(resolved.permissions), user };
   } catch {
-    return { ok: false, role: "USER", roleName: "User", permissions: [], user };
+    return { ok: false, role: "USER", roleName: "User", permissions: [], tier: "none", user };
   }
 }
 
@@ -118,9 +118,9 @@ export function isAdminEmail(email?: string | null) {
   return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
-/** Is this account a staff member (admin/agent/any role with admin access)? */
-export async function isStaffUser(email: string, roleKey: string): Promise<boolean> {
-  if (isAdminEmail(email)) return true;
+/** Resolve a user's access tier from email + role key (used at login, before a session exists). */
+export async function accessForUser(email: string, roleKey: string): Promise<"admin" | "agent" | "none"> {
+  if (isAdminEmail(email)) return "admin";
   const resolved = await resolveRole(roleKey || "USER");
-  return grantsAdminAccess(resolved.permissions);
+  return accessTier(resolved.permissions);
 }
