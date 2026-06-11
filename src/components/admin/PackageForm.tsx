@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Loader2, Save, AlertCircle, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 import { PACKAGE_CATEGORIES, type Package } from "@/lib/packages";
 import { cn } from "@/lib/utils";
 
@@ -79,10 +80,10 @@ export function PackageForm({ initial }: { initial?: Package | null }) {
           <Field label="Rating"><input type="number" step="0.1" min={0} max={5} value={f.rating} onChange={(e) => set("rating", Number(e.target.value))} className="ainp" /></Field>
           <Field label="Reviews"><input type="number" min={0} value={f.reviews} onChange={(e) => set("reviews", Number(e.target.value))} className="ainp" /></Field>
           <Field label="Best time"><input value={f.bestTime} onChange={(e) => set("bestTime", e.target.value)} placeholder="Nov – Apr" className="ainp" /></Field>
-          <Field label="Image">
-            <select value={f.image} onChange={(e) => set("image", e.target.value)} className="ainp">{IMAGE_OPTIONS.map((i) => <option key={i} value={i}>{i}</option>)}</select>
-          </Field>
         </div>
+        <Field label="Cover image" className="mt-3">
+          <ImageUpload value={f.image} onChange={(url) => set("image", url)} folder="packages" presets={IMAGE_OPTIONS} />
+        </Field>
         <Field label="Overview *" className="mt-3"><textarea value={f.overview} onChange={(e) => set("overview", e.target.value)} rows={3} placeholder="Short description of the package…" className="ainp resize-none" /></Field>
       </Card>
 
