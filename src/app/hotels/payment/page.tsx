@@ -71,6 +71,7 @@ export default function HotelPaymentPage() {
   const pay = async () => {
     if (!useAuth.getState().user) { useAuth.getState().requireAuth(() => pay()); return; }
     setPayError("");
+    if (!billState) { setPayError("Please select your billing state (for GST) to continue."); return; }
     setProcessing(true);
     const st = useHotelBooking.getState();
     const total = grandTotal;
@@ -138,7 +139,7 @@ export default function HotelPaymentPage() {
             <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
               <HotelSummaryCard />
               <HotelPriceSummary q={q} config={config} state={billState} onState={setBillState} cta={
-                <Button className="w-full" onClick={pay} disabled={processing}>
+                <Button className="w-full" onClick={pay} disabled={processing || !billState}>
                   {processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(grandTotal)}</>}
                 </Button>
               } />

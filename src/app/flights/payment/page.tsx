@@ -84,6 +84,7 @@ export default function PaymentPage() {
       useAuth.getState().requireAuth(() => pay());
       return;
     }
+    if (!useBooking.getState().customerState) { setPayError("Please select your billing state (for GST) to continue."); return; }
     setPayError("");
     setProcessing(true);
     const st = useBooking.getState();
@@ -219,7 +220,7 @@ export default function PaymentPage() {
 
             <div className="lg:sticky lg:top-20 lg:self-start">
               <PriceSummary cta={
-                <Button className="w-full" onClick={pay} disabled={processing}>
+                <Button className="w-full" onClick={pay} disabled={processing || !customerState}>
                   {processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(grandTotal)}</>}
                 </Button>
               } />

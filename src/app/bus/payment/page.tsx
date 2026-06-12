@@ -50,6 +50,7 @@ export default function BusPaymentPage() {
 
   const pay = async () => {
     if (!useAuth.getState().user) { useAuth.getState().requireAuth(() => pay()); return; }
+    if (!billState) { setPayError("Please select your billing state (for GST) to continue."); return; }
     setPayError(""); setProcessing(true);
     const st = useBusBooking.getState();
     const total = grandTotal;
@@ -93,7 +94,7 @@ export default function BusPaymentPage() {
               </div>
             </div>
             <div className="lg:sticky lg:top-20 lg:self-start">
-              <BusPriceSummary q={q} config={config} state={billState} onState={setBillState} cta={<Button className="w-full" onClick={pay} disabled={processing}>{processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(grandTotal)}</>}</Button>} />
+              <BusPriceSummary q={q} config={config} state={billState} onState={setBillState} cta={<Button className="w-full" onClick={pay} disabled={processing || !billState}>{processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(grandTotal)}</>}</Button>} />
             </div>
           </div>
         </div>

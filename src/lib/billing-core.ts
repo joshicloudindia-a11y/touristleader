@@ -37,10 +37,12 @@ export function computeServiceCharge(bookingAmount: number, cfg: BillingConfigDa
   return cfg.serviceChargeType === "PERCENT" ? r((bookingAmount * cfg.serviceChargeValue) / 100) : r(cfg.serviceChargeValue);
 }
 
-/** GST on a taxable amount, split by place of supply (same state → CGST+SGST, else IGST). */
+/** GST on a taxable amount, split by place of supply (same state → CGST+SGST, else IGST).
+ *  No GST is applied until a billing state is selected (service charge shows alone first). */
 export function computeGst(taxable: number, customerState: string | undefined | null, cfg: BillingConfigData): GstBreakdown {
   if (!cfg.gstEnabled || !taxable || taxable <= 0) return { type: "NONE", igst: 0, cgst: 0, sgst: 0, total: 0 };
-  const same = !!customerState && customerState.trim().toLowerCase() === cfg.companyState.trim().toLowerCase();
+  if (!customerState || !customerState.trim()) return { type: "NONE", igst: 0, cgst: 0, sgst: 0, total: 0 };
+  const same = customerState.trim().toLowerCase() === cfg.companyState.trim().toLowerCase();
   if (same) {
     const cgst = r((taxable * cfg.cgstRate) / 100);
     const sgst = r((taxable * cfg.sgstRate) / 100);
