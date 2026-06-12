@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic";
 interface Hit { type: string; label: string; sub: string; href: string }
 
 export async function GET(req: NextRequest) {
-  const { ok, permissions } = await isAdmin();
+  const { ok, permissions, tier, user } = await isAdmin();
   if (!ok) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const can = (p: string) => permissions.includes(p);
+  const agentScope = tier === "agent" && user ? { bookedByAgentId: user.id } : {};
   const q = (req.nextUrl.searchParams.get("q") || "").trim();
   if (q.length < 2) return NextResponse.json({ groups: [] });
 
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
   // Bookings
   if (can("bookings.view")) {
     const rows = await prisma.booking.findMany({
-      where: { OR: [{ bookingRef: { contains: q } }, { pnr: { contains: q } }, { contactEmail: { contains: q } }, { origin: { contains: q } }, { destination: { contains: q } }] },
+      where: { AND: [agentScope, { OR: [{ bookingRef: { contains: q } }, { pnr: { contains: q } }, { contactEmail: { contains: q } }, { origin: { contains: q } }, { destination: { contains: q } }] }] },
       orderBy: { createdAt: "desc" }, take: 5,
       select: { bookingRef: true, bookingType: true, origin: true, destination: true, contactEmail: true },
     });

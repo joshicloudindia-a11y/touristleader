@@ -5,21 +5,23 @@ import { isAdmin } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const { ok } = await isAdmin();
+  const { ok, tier, user } = await isAdmin();
   if (!ok) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // agents see only their own bookings; admins see everything
+  const bScope = tier === "agent" && user ? { bookedByAgentId: user.id } : {};
 
   try {
     const [bookings, revenueAgg, users, enquiries, openEnquiries, tickets, openTickets, packages, byType, recent] = await Promise.all([
-      prisma.booking.count(),
-      prisma.booking.aggregate({ _sum: { totalAmount: true }, where: { status: "CONFIRMED" } }),
+      prisma.booking.count({ where: bScope }),
+      prisma.booking.aggregate({ _sum: { totalAmount: true }, where: { status: "CONFIRMED", ...bScope } }),
       prisma.user.count(),
       prisma.packageEnquiry.count(),
       prisma.packageEnquiry.count({ where: { status: "NEW" } }),
       prisma.supportTicket.count(),
       prisma.supportTicket.count({ where: { status: "OPEN" } }),
       prisma.package.count(),
-      prisma.booking.groupBy({ by: ["bookingType"], _count: { _all: true } }),
-      prisma.booking.findMany({ orderBy: { createdAt: "desc" }, take: 6, select: { id: true, bookingRef: true, bookingType: true, origin: true, destination: true, totalAmount: true, status: true, contactEmail: true, createdAt: true, flightData: true } }),
+      prisma.booking.groupBy({ by: ["bookingType"], _count: { _all: true }, where: bScope }),
+      prisma.booking.findMany({ where: bScope, orderBy: { createdAt: "desc" }, take: 6, select: { id: true, bookingRef: true, bookingType: true, origin: true, destination: true, totalAmount: true, status: true, contactEmail: true, createdAt: true, flightData: true } }),
     ]);
 
     const typeCounts: Record<string, number> = {};

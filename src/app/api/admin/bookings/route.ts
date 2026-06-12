@@ -5,11 +5,17 @@ import { isAdmin } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const { ok } = await isAdmin();
+  const { ok, tier, user } = await isAdmin();
   if (!ok) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const type = req.nextUrl.searchParams.get("type");
+
+  const where: { bookingType?: string; bookedByAgentId?: string } = {};
+  if (type && type !== "ALL") where.bookingType = type;
+  // agents only see the bookings they created; admins see all
+  if (tier === "agent" && user) where.bookedByAgentId = user.id;
+
   const bookings = await prisma.booking.findMany({
-    where: type && type !== "ALL" ? { bookingType: type } : undefined,
+    where,
     orderBy: { createdAt: "desc" },
     take: 200,
   });
