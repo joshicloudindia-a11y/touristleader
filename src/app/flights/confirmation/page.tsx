@@ -10,6 +10,7 @@ import { InfoPopup } from "@/components/ui/InfoPopup";
 import { Modal } from "@/components/ui/Modal";
 import { FlightSummaryCard } from "@/components/booking/FlightSummaryCard";
 import { useBooking } from "@/store/booking";
+import { useBilling } from "@/lib/useBilling";
 import { CABS, AIRPORT_SERVICES, AIRPORTS } from "@/lib/constants";
 import { formatINR, formatDate, formatTime } from "@/lib/utils";
 
@@ -43,7 +44,8 @@ function Confirmation() {
   const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState("");
   const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const { flight, fare, query, passengers, contactEmail, contactPhone, addOns } = useBooking();
+  const { flight, fare, query, passengers, contactEmail, contactPhone, addOns, customerState } = useBooking();
+  const { quote } = useBilling();
 
   useEffect(() => {
     setMounted(true);
@@ -63,7 +65,9 @@ function Confirmation() {
   const farePrice = fare?.price || 0;
   const base = Math.round(farePrice * 0.82) * pax;
   const taxes = farePrice * pax - base;
-  const total = farePrice * pax + (addOns || 0) + CONVENIENCE;
+  const subtotal = farePrice * pax + (addOns || 0) + CONVENIENCE;
+  const q = quote(subtotal, customerState);
+  const total = subtotal + q.addon;
 
   // ---- Add to Calendar (.ics) ----
   const addToCalendar = () => {
@@ -124,6 +128,10 @@ function Confirmation() {
       ["Taxes & airport fees", "", formatINR(taxes)],
       ["Add-ons (seats / meals)", "", formatINR(addOns || 0)],
       ["Convenience fee", "non-refundable", formatINR(CONVENIENCE)],
+      ...(q.serviceCharge > 0 ? [["Service charge", customerState ? `Billing: ${customerState}` : "", formatINR(q.serviceCharge)]] : []),
+      ...(q.gst.igst > 0 ? [["IGST (18%)", "", formatINR(q.gst.igst)]] : []),
+      ...(q.gst.cgst > 0 ? [["CGST (9%)", "", formatINR(q.gst.cgst)]] : []),
+      ...(q.gst.sgst > 0 ? [["SGST (9%)", "", formatINR(q.gst.sgst)]] : []),
     ];
     const flightLine = flight
       ? `${cityName(flight.from)} (${flight.from}) &rarr; ${cityName(flight.to)} (${flight.to})`
@@ -322,6 +330,10 @@ function Confirmation() {
           <Row label="Taxes & fees" value={formatINR(taxes)} />
           <Row label="Add-ons (seats / meals)" value={formatINR(addOns || 0)} />
           <Row label="Convenience fee" value={formatINR(CONVENIENCE)} />
+          {q.serviceCharge > 0 && <Row label="Service charge" value={formatINR(q.serviceCharge)} />}
+          {q.gst.igst > 0 && <Row label="IGST (18%)" value={formatINR(q.gst.igst)} />}
+          {q.gst.cgst > 0 && <Row label="CGST (9%)" value={formatINR(q.gst.cgst)} />}
+          {q.gst.sgst > 0 && <Row label="SGST (9%)" value={formatINR(q.gst.sgst)} />}
           <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 text-base font-extrabold text-slate-900">
             <span>Total Paid</span><span>{formatINR(total)}</span>
           </div>

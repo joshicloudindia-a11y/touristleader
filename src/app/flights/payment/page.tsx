@@ -29,25 +29,23 @@ const METHODS = [
 
 export default function PaymentPage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { config, quote } = useBilling();
+  const { quote } = useBilling();
+  const customerState = useBooking((s) => s.customerState);
   const [mounted, setMounted] = useState(false);
   const [method, setMethod] = useState("upi");
   const [processing, setProcessing] = useState(false);
   const [payError, setPayError] = useState("");
-  const [billState, setBillState] = useState("");
   const [useWallet, setUseWallet] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     if (!useBooking.getState().flight) router.replace("/");
   }, [router]);
-  useEffect(() => { if (user?.state && !billState) setBillState(user.state); }, [user, billState]);
 
   if (!mounted) return null;
 
   const subtotal = useBooking.getState().totalAmount() + 299;
-  const q = quote(subtotal, billState);
+  const q = quote(subtotal, customerState);
   const grandTotal = subtotal + q.addon;
 
   type RzpFields = { razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string };
@@ -62,7 +60,7 @@ export default function PaymentPage() {
           flight: st.flight, fare: st.fare, query: st.query, passengers: st.passengers,
           seats: st.seats, meals: st.meals, contactEmail: st.contactEmail, contactPhone: st.contactPhone,
           addOns: st.addOns, total,
-          customerState: billState, serviceCharge: q.serviceCharge, gst: q.gst,
+          customerState, serviceCharge: q.serviceCharge, gst: q.gst,
           ...(useWallet ? { paymentSource: "wallet" } : {}),
           ...rzp,
         }),
@@ -220,7 +218,7 @@ export default function PaymentPage() {
             </div>
 
             <div className="lg:sticky lg:top-20 lg:self-start">
-              <PriceSummary q={q} config={config} state={billState} onState={setBillState} cta={
+              <PriceSummary cta={
                 <Button className="w-full" onClick={pay} disabled={processing}>
                   {processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(grandTotal)}</>}
                 </Button>

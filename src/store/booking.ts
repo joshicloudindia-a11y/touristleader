@@ -28,6 +28,7 @@ interface BookingState {
   meals: Record<number, string>;
   addOns: number;
   promoCode: string;
+  customerState: string;
   setQuery: (q: SearchQuery) => void;
   selectFlight: (f: Flight, fare: FareOption) => void;
   setPassengers: (p: PassengerInput[]) => void;
@@ -36,6 +37,7 @@ interface BookingState {
   setMeal: (i: number, meal: string, price: number) => void;
   setAddOns: (n: number) => void;
   setPromo: (code: string) => void;
+  setCustomerState: (s: string) => void;
   reset: () => void;
   totalAmount: () => number;
 }
@@ -53,6 +55,7 @@ export const useBooking = create<BookingState>()(
       meals: {},
       addOns: 0,
       promoCode: "",
+      customerState: "",
       setQuery: (query) => set({ query }),
       selectFlight: (flight, fare) => set({ flight, fare }),
       setPassengers: (passengers) => set({ passengers }),
@@ -61,6 +64,7 @@ export const useBooking = create<BookingState>()(
       setMeal: (i, meal) => set((s) => ({ meals: { ...s.meals, [i]: meal } })),
       setAddOns: (addOns) => set({ addOns }),
       setPromo: (promoCode) => set({ promoCode }),
+      setCustomerState: (customerState) => set({ customerState }),
       reset: () =>
         set({ flight: null, fare: null, passengers: [], seats: {}, meals: {}, addOns: 0, promoCode: "" }),
       totalAmount: () => {
