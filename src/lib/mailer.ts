@@ -266,6 +266,42 @@ export async function sendVisaEnquiryEmails(e: {
   return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
 }
 
+export async function sendForexEnquiryEmails(e: {
+  enquiryNo: string; type: string; name: string; email: string; phone: string;
+  address?: string; pan?: string; currencies?: string[]; amount?: string; message?: string;
+}) {
+  const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
+  const typeLabel = e.type === "CARD" ? "Multi-Currency Forex Card" : "Foreign Currency Notes";
+  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">
+    <h2 style="color:#0b63d6">New Forex Enquiry · ${e.enquiryNo}</h2>
+    <table style="font-size:14px">
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Request</td><td><b>${typeLabel}</b></td></tr>
+      ${e.currencies && e.currencies.length ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">Currencies</td><td>${e.currencies.join(", ")}</td></tr>` : ""}
+      ${e.amount ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">Amount</td><td>${e.amount}</td></tr>` : ""}
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Name</td><td>${e.name}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Contact</td><td>${e.email} · ${e.phone}</td></tr>
+      ${e.address ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">Address</td><td>${e.address}</td></tr>` : ""}
+      ${e.pan ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">PAN</td><td>${e.pan}</td></tr>` : ""}
+    </table>
+    ${e.message ? `<p style="margin-top:12px;background:#f8fafc;padding:12px;border-radius:8px">${e.message}</p>` : ""}</div>`;
+
+  const inner = `
+    ${refBar("Enquiry No.", e.enquiryNo, "Request", typeLabel.length > 22 ? typeLabel.slice(0, 22) + "…" : typeLabel)}
+    <p style="margin:0 0 10px;color:#475569;font-size:14px">Hi ${e.name}, thanks for your forex enquiry. Our team will reach out shortly with rates and the next steps.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">
+      <tr><td style="padding:4px 0;color:#64748b">Request</td><td align="right" style="font-weight:600">${typeLabel}</td></tr>
+      ${e.currencies && e.currencies.length ? `<tr><td style="padding:4px 0;color:#64748b">Currencies</td><td align="right" style="font-weight:600">${e.currencies.join(", ")}</td></tr>` : ""}
+    </table>
+    ${sectionTitle("What's next")}
+    <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">Our forex desk will contact you with live rates, delivery options and the documents needed. You can also call us at +91 9987-495-897.</p>`;
+
+  const r = await Promise.all([
+    deliver({ to: inbox, replyTo: e.email, subject: `Forex Enquiry ${e.enquiryNo} · ${typeLabel}`, html: team, transactional: true }),
+    deliver({ to: e.email, subject: `We've got your forex enquiry — ${typeLabel} (${e.enquiryNo})`, html: emailShell({ title: "Forex Enquiry Received", sub: typeLabel }, inner), transactional: true }),
+  ]);
+  return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
+}
+
 export async function sendTicketReplyEmail(opts: {
   to: string; ticketNo: string; subject: string; body: string; toCustomer: boolean; customerName?: string;
 }) {

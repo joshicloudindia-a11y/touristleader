@@ -237,6 +237,31 @@ model Package {
   @@index([slug])
 }
 
+model ForexEnquiry {
+  id         String   @id @default(cuid())
+  enquiryNo  String   @unique
+  userId     String?
+  type       String // CARD | NOTES
+  name       String
+  address    String?  @db.Text
+  phone      String
+  email      String
+  pan        String?
+  currencies Json? // string[] (for NOTES)
+  amount     String?
+  message    String?  @db.Text
+  status     String   @default("NEW") // NEW | CONTACTED | PROCESSING | DELIVERED | CLOSED
+  source     String   @default("WEB")
+  assignedTo String?
+  note       String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([enquiryNo])
+}
+
 model VisaEnquiry {
   id         String   @id @default(cuid())
   enquiryNo  String   @unique
