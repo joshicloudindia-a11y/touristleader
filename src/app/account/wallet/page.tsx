@@ -58,13 +58,16 @@ export default function CustomerWalletPage() {
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <Header active="flights" />
       <main className="flex-1 bg-slate-100">
-        <div className="mx-auto max-w-2xl px-4 py-8">
-          <h1 className="mb-5 flex items-center gap-2 text-2xl font-extrabold text-slate-900"><Wallet size={24} className="text-brand" /> My Wallet</h1>
+        <div className="mx-auto max-w-5xl px-4 py-8">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="flex items-center gap-2 text-2xl font-extrabold text-slate-900"><Wallet size={24} className="text-brand" /> My Wallet</h1>
+            {user && <Button onClick={() => setShowAdd(true)}><Plus size={16} /> Add money</Button>}
+          </div>
           {!fetched ? <div className="flex justify-center py-16 text-slate-400"><Loader2 className="animate-spin" /></div> :
             !user ? (
               <div className="rounded-2xl bg-white p-10 text-center shadow-sm"><p className="text-lg font-bold text-slate-800">Please log in</p><Button className="mt-4" onClick={() => router.push("/")}>Go to Home</Button></div>
             ) : (
-              <WalletView key={refreshKey} pendingLabel="On hold" action={<Button className="!bg-white !text-brand hover:!bg-white/90" onClick={() => setShowAdd(true)}><Plus size={16} /> Add money</Button>} />
+              <WalletView key={refreshKey} pendingLabel="On hold" wide />
             )}
         </div>
       </main>
