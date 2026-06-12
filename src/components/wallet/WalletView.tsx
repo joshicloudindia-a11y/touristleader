@@ -6,7 +6,7 @@ import { formatINR, formatDate, formatTime, cn } from "@/lib/utils";
 export interface WalletTxn { id: string; type: "CREDIT" | "DEBIT"; amount: number; reason: string; status: string; note: string | null; balanceAfter: number; createdAt: string }
 const REASON_LABEL: Record<string, string> = { TOPUP: "Money added", BOOKING: "Booking payment", REFUND: "Refund", COMMISSION: "Commission earned", SETTLEMENT: "Settled by admin", ADJUSTMENT: "Adjustment" };
 
-export function WalletView({ pendingLabel = "Pending settlement", action, onLoaded }: { pendingLabel?: string; action?: React.ReactNode; onLoaded?: (balance: number) => void }) {
+export function WalletView({ pendingLabel = "Pending settlement", action, onLoaded, wide = false }: { pendingLabel?: string; action?: React.ReactNode; onLoaded?: (balance: number) => void; wide?: boolean }) {
   const [balance, setBalance] = useState(0);
   const [pending, setPending] = useState(0);
   const [txns, setTxns] = useState<WalletTxn[]>([]);
@@ -20,11 +20,11 @@ export function WalletView({ pendingLabel = "Pending settlement", action, onLoad
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl bg-gradient-to-br from-brand to-sky-500 p-5 text-white shadow-sm">
+    <div className={cn("space-y-4", wide && "lg:grid lg:grid-cols-[340px_1fr] lg:gap-4 lg:space-y-0 lg:items-start")}>
+      <div className={cn("rounded-2xl bg-gradient-to-br from-brand to-sky-500 p-5 text-white shadow-sm")}>
         <div className="flex items-center gap-2 text-sm text-white/85"><Wallet size={18} /> Wallet balance</div>
-        <p className="mt-1 text-3xl font-extrabold">{formatINR(balance)}</p>
-        {pending > 0 && <p className="mt-1 flex items-center gap-1 text-xs text-white/80"><Clock size={12} /> {pendingLabel}: {formatINR(pending)}</p>}
+        <p className="mt-1 text-3xl font-extrabold sm:text-4xl">{formatINR(balance)}</p>
+        {pending > 0 && <p className="mt-1.5 flex items-center gap-1 text-xs text-white/80"><Clock size={12} /> {pendingLabel}: {formatINR(pending)}</p>}
         {action && <div className="mt-4">{action}</div>}
       </div>
 
