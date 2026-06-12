@@ -3,12 +3,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { LayoutDashboard, Palmtree, Loader2, ShieldAlert, ExternalLink, LogOut, Mail, ArrowLeft, ShieldCheck, AlertCircle, Ticket, LifeBuoy, Users, ReceiptText, Menu, SlidersHorizontal, Wallet } from "lucide-react";
+import { LayoutDashboard, Palmtree, Loader2, ShieldAlert, ExternalLink, LogOut, Mail, ArrowLeft, ShieldCheck, AlertCircle, Ticket, LifeBuoy, Users, ReceiptText, Menu, SlidersHorizontal, Wallet, Headset } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { type Permission } from "@/lib/rbac";
 import { AdminSearch } from "./AdminSearch";
 import { AdminProfileMenu } from "./AdminProfileMenu";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 const NAV: { seg: string; label: string; agentLabel?: string; icon: React.ElementType; perm: Permission }[] = [
   { seg: "", label: "Dashboard", agentLabel: "My Workspace", icon: LayoutDashboard, perm: "dashboard.view" },
@@ -112,6 +114,34 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
       </Link>
     );
   };
+
+  // ---- Agent console: frontend-style chrome (customer Header + tabs + Footer) ----
+  if (mode === "agent") {
+    return (
+      <AdminCtx.Provider value={{ role, permissions, can, email, basePath, tier }}>
+        <Header active="flights" />
+        <div className="border-b border-slate-200 bg-white">
+          <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 no-scrollbar">
+            <span className="mr-2 flex shrink-0 items-center gap-1.5 py-3.5 text-sm font-extrabold text-slate-900"><Headset size={16} className="text-brand" /> Agent</span>
+            {visibleNav.map((n) => {
+              const href = hrefFor(n.seg);
+              const active = pathname === href || (n.seg !== "" && pathname.startsWith(href));
+              const label = n.agentLabel || n.label;
+              return (
+                <Link key={href} href={href} className={cn("flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-3.5 text-sm font-semibold transition-colors", active ? "border-brand text-brand" : "border-transparent text-slate-500 hover:text-slate-800")}>
+                  <n.icon size={15} /> {label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+        <main className="flex-1 bg-slate-100">
+          <div className="mx-auto max-w-7xl px-4 py-6">{children}</div>
+        </main>
+        <Footer />
+      </AdminCtx.Provider>
+    );
+  }
 
   return (
     <AdminCtx.Provider value={{ role, permissions, can, email, basePath, tier }}>

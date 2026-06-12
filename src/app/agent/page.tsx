@@ -29,7 +29,7 @@ export default function AgentHome() {
       <div className="mb-5 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-brand to-sky-500 p-5 text-white shadow-sm">
         <span className="grid h-12 w-12 place-items-center rounded-xl bg-white/20"><Headset size={24} /></span>
         <div>
-          <h2 className="text-lg font-extrabold">Hi{name ? `, ${name}` : ""} 👋</h2>
+          <h2 className="text-lg font-extrabold">Hi{name ? `, ${name}` : ""}</h2>
           <p className="text-sm text-white/85">Here&apos;s your desk — leads to call, tickets to answer, bookings to assist.</p>
         </div>
         <Link href="/agent/enquiries" className="ml-auto hidden items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-brand sm:flex"><Plus size={16} /> New Lead</Link>
