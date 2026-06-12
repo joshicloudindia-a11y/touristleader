@@ -80,6 +80,57 @@ function getTransporter() {
   return transporter;
 }
 
+const MAIL_FROM = process.env.MAIL_FROM || `TouristLeader <${process.env.SMTP_USER || "no-reply@touristleader.com"}>`;
+const REPLY_TO = process.env.MAIL_REPLY_TO || process.env.SUPPORT_EMAIL || process.env.SMTP_USER;
+
+/** Strip HTML to a readable plain-text fallback (multipart e-mails land in inbox far more often than HTML-only). */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<head[\s\S]*?<\/head>/gi, "")
+    .replace(/<\/(p|div|tr|h[1-6]|li|table)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ").replace(/&middot;/g, "·").replace(/&rarr;/g, "->")
+    .replace(/&amp;/g, "&").replace(/&copy;/g, "(c)").replace(/&#10003;/g, "[ok]")
+    .replace(/&[a-z]+;/gi, " ")
+    .replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/**
+ * Single send path for every e-mail. Adds the things that keep messages OUT of spam:
+ * a plain-text alternative, a real Reply-To, a matching envelope sender, and
+ * legitimacy headers (List-Unsubscribe etc.). `transactional` skips unsubscribe (e.g. OTP).
+ */
+async function deliver(opts: { to: string; subject: string; html: string; text?: string; replyTo?: string; transactional?: boolean }) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn("[mailer] SMTP not configured, skipping email");
+    return { skipped: true } as const;
+  }
+  const unsubMail = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
+  const headers: Record<string, string> = { "X-Mailer": "TouristLeader" };
+  if (!opts.transactional) {
+    headers["List-Unsubscribe"] = `<mailto:${unsubMail}?subject=unsubscribe>, <${BASE}/help>`;
+    headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+  }
+  try {
+    const info = await getTransporter().sendMail({
+      from: MAIL_FROM,
+      sender: process.env.SMTP_USER,
+      to: opts.to,
+      replyTo: opts.replyTo || REPLY_TO,
+      subject: opts.subject,
+      text: opts.text || htmlToText(opts.html),
+      html: opts.html,
+      headers,
+    });
+    return { messageId: info.messageId } as const;
+  } catch (err) {
+    console.error("[mailer] send failed:", (err as Error).message);
+    return { error: (err as Error).message } as const;
+  }
+}
+
 export async function sendBookingEmail(opts: {
   to: string;
   bookingRef: string;
@@ -87,29 +138,14 @@ export async function sendBookingEmail(opts: {
   html: string;
   subject?: string;
 }) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn("[mailer] SMTP not configured, skipping email");
-    return { skipped: true };
-  }
-  try {
-    const info = await getTransporter().sendMail({
-      from: process.env.MAIL_FROM || `TouristLeader <${process.env.SMTP_USER}>`,
-      to: opts.to,
-      subject: opts.subject || `Booking Confirmed · ${opts.bookingRef} · PNR ${opts.pnr}`,
-      html: opts.html,
-    });
-    return { messageId: info.messageId };
-  } catch (err) {
-    console.error("[mailer] send failed:", (err as Error).message);
-    return { error: (err as Error).message };
-  }
+  return deliver({
+    to: opts.to,
+    subject: opts.subject || `Booking Confirmed · ${opts.bookingRef} · PNR ${opts.pnr}`,
+    html: opts.html,
+  });
 }
 
 export async function sendOtpEmail(to: string, otp: string) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn("[mailer] SMTP not configured, skipping OTP email");
-    return { skipped: true };
-  }
   const html = `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;padding:24px">
     <div style="max-width:440px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
       <div style="background:linear-gradient(135deg,#0a4fa8,#0b63d6);padding:22px;color:#fff">
@@ -119,34 +155,18 @@ export async function sendOtpEmail(to: string, otp: string) {
       <div style="padding:26px;text-align:center">
         <p style="color:#6b7280;margin:0 0 12px">Your one-time login code is</p>
         <div style="font-size:34px;font-weight:800;letter-spacing:10px;color:#0b63d6">${otp}</div>
-        <p style="color:#9ca3af;font-size:13px;margin:16px 0 0">This code expires in 10 minutes. Don't share it with anyone.</p>
+        <p style="color:#9ca3af;font-size:13px;margin:16px 0 0">This code expires in 10 minutes. Don&apos;t share it with anyone.</p>
       </div>
     </div></body></html>`;
-  try {
-    const info = await getTransporter().sendMail({
-      from: process.env.MAIL_FROM || `TouristLeader <${process.env.SMTP_USER}>`,
-      to,
-      subject: `${otp} is your TouristLeader login code`,
-      html,
-    });
-    return { messageId: info.messageId };
-  } catch (err) {
-    console.error("[mailer] OTP send failed:", (err as Error).message);
-    return { error: (err as Error).message };
-  }
+  const text = `Your TouristLeader login code is ${otp}\n\nThis code expires in 10 minutes. Don't share it with anyone.\n\nIf you didn't request this, you can safely ignore this email.\n— TouristLeader`;
+  return deliver({ to, subject: `${otp} is your TouristLeader verification code`, html, text, transactional: true });
 }
 
 export async function sendSupportTicketEmails(t: {
   ticketNo: string; name: string; email: string; phone?: string;
   category: string; bookingRef?: string; subject: string; message: string;
 }) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn("[mailer] SMTP not configured, skipping support emails");
-    return { skipped: true };
-  }
   const supportInbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
-  const tx = getTransporter();
-  const from = process.env.MAIL_FROM || `TouristLeader <${process.env.SMTP_USER}>`;
 
   // 1. Notify the support team
   const teamHtml = `<div style="font-family:Arial,sans-serif;max-width:560px">
@@ -173,26 +193,18 @@ export async function sendSupportTicketEmails(t: {
     </div>
   </div>`;
 
-  try {
-    await Promise.all([
-      tx.sendMail({ from, to: supportInbox, replyTo: t.email, subject: `Ticket ${t.ticketNo} · ${t.category} · ${t.subject}`, html: teamHtml }),
-      tx.sendMail({ from, to: t.email, subject: `We've received your request — Ticket ${t.ticketNo}`, html: userHtml }),
-    ]);
-    return { ok: true };
-  } catch (err) {
-    console.error("[mailer] support email failed:", (err as Error).message);
-    return { error: (err as Error).message };
-  }
+  const r = await Promise.all([
+    deliver({ to: supportInbox, replyTo: t.email, subject: `Ticket ${t.ticketNo} · ${t.category} · ${t.subject}`, html: teamHtml, transactional: true }),
+    deliver({ to: t.email, subject: `We've received your request — Ticket ${t.ticketNo}`, html: userHtml, transactional: true }),
+  ]);
+  return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
 }
 
 export async function sendPackageEnquiryEmails(e: {
   enquiryNo: string; packageTitle: string; name: string; email: string; phone: string;
   travelMonth?: string; adults: number; children: number; message?: string;
 }) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return { skipped: true };
   const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
-  const tx = getTransporter();
-  const from = process.env.MAIL_FROM || `TouristLeader <${process.env.SMTP_USER}>`;
 
   const team = `<div style="font-family:Arial,sans-serif;max-width:560px">
     <h2 style="color:#0b63d6">New Holiday Package Enquiry · ${e.enquiryNo}</h2>
@@ -212,40 +224,29 @@ export async function sendPackageEnquiryEmails(e: {
     ${sectionTitle("What's next")}
     <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">Our team will reach out within a few hours with the best price, itinerary options and payment details. You can also call us at +91 9987-495-897.</p>`;
 
-  try {
-    await Promise.all([
-      tx.sendMail({ from, to: inbox, replyTo: e.email, subject: `Package Enquiry ${e.enquiryNo} · ${e.packageTitle}`, html: team }),
-      tx.sendMail({ from, to: e.email, subject: `We've got your enquiry — ${e.packageTitle} (${e.enquiryNo})`, html: emailShell({ title: "Enquiry Received", sub: e.packageTitle }, inner) }),
-    ]);
-    return { ok: true };
-  } catch (err) {
-    console.error("[mailer] enquiry email failed:", (err as Error).message);
-    return { error: (err as Error).message };
-  }
+  const r = await Promise.all([
+    deliver({ to: inbox, replyTo: e.email, subject: `Package Enquiry ${e.enquiryNo} · ${e.packageTitle}`, html: team, transactional: true }),
+    deliver({ to: e.email, subject: `We've got your enquiry — ${e.packageTitle} (${e.enquiryNo})`, html: emailShell({ title: "Enquiry Received", sub: e.packageTitle }, inner), transactional: true }),
+  ]);
+  return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
 }
 
 export async function sendTicketReplyEmail(opts: {
   to: string; ticketNo: string; subject: string; body: string; toCustomer: boolean; customerName?: string;
 }) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return { skipped: true };
   const inner = `
     ${refBar("Ticket", opts.ticketNo, "Subject", opts.subject.length > 24 ? opts.subject.slice(0, 24) + "…" : opts.subject)}
     <p style="margin:0 0 10px;color:#475569;font-size:14px">${opts.toCustomer ? `Hi ${opts.customerName || "there"}, our support team has replied to your ticket:` : "New customer reply on a support ticket:"}</p>
     <div style="white-space:pre-wrap;background:#f8fafc;border-left:3px solid #0b63d6;border-radius:8px;padding:14px 16px;font-size:14px;color:#334155">${opts.body.replace(/</g, "&lt;")}</div>
     ${opts.toCustomer ? `${sectionTitle("Need to add more?")}<p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">Just reply to this email or open My Tickets on touristleader.com to continue the conversation.</p>` : ""}`;
-  try {
-    await getTransporter().sendMail({
-      from: process.env.MAIL_FROM || `TouristLeader <${process.env.SMTP_USER}>`,
-      to: opts.to,
-      replyTo: opts.toCustomer ? undefined : opts.to,
-      subject: `${opts.toCustomer ? "Re: " : "Customer reply · "}${opts.ticketNo} · ${opts.subject}`,
-      html: emailShell({ title: opts.toCustomer ? "Support replied" : "New ticket reply", sub: opts.subject }, inner),
-    });
-    return { ok: true };
-  } catch (err) {
-    console.error("[mailer] ticket reply failed:", (err as Error).message);
-    return { error: (err as Error).message };
-  }
+  const r = await deliver({
+    to: opts.to,
+    replyTo: opts.toCustomer ? undefined : opts.to,
+    subject: `${opts.toCustomer ? "Re: " : "Customer reply · "}${opts.ticketNo} · ${opts.subject}`,
+    html: emailShell({ title: opts.toCustomer ? "Support replied" : "New ticket reply", sub: opts.subject }, inner),
+    transactional: true,
+  });
+  return "error" in r ? r : { ok: true };
 }
 
 export function busBookingEmailHtml(data: {
