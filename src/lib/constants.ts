@@ -1,7 +1,7 @@
 import type { Airport } from "./types";
 
 export const BRAND = {
-  name: "TouristLeader",
+  name: "Tourist Leader",
   tagline: "Make travel caring, seamless, and sustainable",
   promise: "Comfort before, during, and after take off",
 };

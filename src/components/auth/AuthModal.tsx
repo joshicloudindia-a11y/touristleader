@@ -115,9 +115,9 @@ export function AuthModal({ open, onClose, reason }: { open: boolean; onClose: (
         <div className="flex w-full flex-col justify-center px-6 py-10 sm:px-10 md:w-[56%]">
           <div className="mx-auto w-full max-w-sm">
             <div className="mb-6 flex items-center gap-2.5">
-              <Image src="/logo.avif" alt="TouristLeader" width={40} height={40} className="h-10 w-10 rounded-full object-contain" />
+              <Image src="/logo.avif" alt="Tourist Leader" width={40} height={40} className="h-10 w-10 rounded-full object-contain" />
               <div>
-                <p className="text-lg font-extrabold leading-tight text-slate-900">Tourist<span className="text-brand">Leader</span></p>
+                <p className="text-lg font-extrabold leading-tight text-slate-900">Tourist <span className="text-brand">Leader</span></p>
                 <p className="text-xs text-slate-400">Login or create your account</p>
               </div>
             </div>
@@ -153,7 +153,7 @@ export function AuthModal({ open, onClose, reason }: { open: boolean; onClose: (
                   <ShieldCheck size={13} className="text-emerald-500" /> Secured with one-time email verification
                 </p>
                 <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-400">
-                  By proceeding, you agree to TouristLeader&apos;s <span className="text-brand">Privacy Policy</span>, <span className="text-brand">User Agreement</span> and <span className="text-brand">T&amp;Cs</span>.
+                  By proceeding, you agree to Tourist Leader&apos;s <span className="text-brand">Privacy Policy</span>, <span className="text-brand">User Agreement</span> and <span className="text-brand">T&amp;Cs</span>.
                 </p>
               </>
             ) : (

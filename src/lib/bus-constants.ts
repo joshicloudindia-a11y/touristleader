@@ -6,7 +6,7 @@ export const BUS_CITIES = [
 ];
 
 export const BUS_OPERATORS = [
-  "TouristLeader Travels", "VRL Travels", "SRS Travels", "Orange Tours", "Neeta Travels",
+  "Tourist Leader Travels", "VRL Travels", "SRS Travels", "Orange Tours", "Neeta Travels",
   "Sharma Travels", "IntrCity SmartBus", "Zingbus", "GreenLine", "KPN Travels",
   "Parveen Travels", "City Land Travels", "Hans Travels", "Rajdhani Express",
 ];

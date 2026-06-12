@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     // money was paid from wallet → credit it straight back
     await walletTxn({ userId: user.id, type: "CREDIT", amount, reason: "REFUND", refType: "BOOKING", refId: bookingRef, note: `Refund · ${bookingRef} (cancelled)` });
     refundMode = "wallet"; refundAmount = amount;
-    message = `₹${amount} refunded to your TouristLeader wallet.`;
+    message = `₹${amount} refunded to your Tourist Leader wallet.`;
   } else if (booking.paymentId) {
     // paid via card / UPI / netbanking → refund to the original bank account
     const r = await refundPayment(booking.paymentId, amount);

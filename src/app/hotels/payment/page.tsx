@@ -89,7 +89,7 @@ export default function HotelPaymentPage() {
     const rzp = new window.Razorpay({
       key: order.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
       amount: order.amount, currency: order.currency || "INR", order_id: order.orderId,
-      name: "TouristLeader", description: st.hotel ? `${st.hotel.name}, ${st.hotel.city}` : "Hotel booking",
+      name: "Tourist Leader", description: st.hotel ? `${st.hotel.name}, ${st.hotel.city}` : "Hotel booking",
       ...(isHttps ? { image: `${window.location.origin}/logo.avif` } : {}),
       prefill: { name: st.guest?.fullName || "", email: st.guest?.email || "", contact: st.guest?.phone || "", method: "upi" },
       theme: { color: "#0b63d6" },

@@ -61,7 +61,7 @@ export default function BusPaymentPage() {
     const isHttps = window.location.protocol === "https:";
     const rzp = new window.Razorpay({
       key: order.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, amount: order.amount, currency: order.currency || "INR", order_id: order.orderId,
-      name: "TouristLeader", description: st.bus ? `Bus ${st.query?.from} → ${st.query?.to}` : "Bus ticket",
+      name: "Tourist Leader", description: st.bus ? `Bus ${st.query?.from} → ${st.query?.to}` : "Bus ticket",
       ...(isHttps ? { image: `${window.location.origin}/logo.avif` } : {}),
       prefill: { name: st.passengers?.[0]?.fullName || "", email: st.contactEmail || "", contact: st.contactPhone || "", method: "upi" },
       theme: { color: "#0b63d6" },

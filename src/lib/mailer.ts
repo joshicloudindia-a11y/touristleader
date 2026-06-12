@@ -15,9 +15,9 @@ function emailShell(hero: { title: string; sub: string }, inner: string) {
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(2,6,23,.10)">
           <tr><td style="background:linear-gradient(135deg,#0a4fa8 0%,#0b63d6 55%,#38bdf8 100%);padding:22px 28px">
             <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-              <td style="vertical-align:middle"><img src="${LOGO}" alt="TouristLeader" width="44" height="44" style="display:block;border-radius:50%;background:#fff;padding:3px"></td>
+              <td style="vertical-align:middle"><img src="${LOGO}" alt="Tourist Leader" width="44" height="44" style="display:block;border-radius:50%;background:#fff;padding:3px"></td>
               <td style="vertical-align:middle;padding-left:12px">
-                <div style="font-size:20px;font-weight:800;color:#fff;line-height:1">TouristLeader</div>
+                <div style="font-size:20px;font-weight:800;color:#fff;line-height:1">Tourist Leader</div>
                 <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:4px">Comfort before, during, and after take off</div>
               </td>
             </tr></table>
@@ -31,7 +31,7 @@ function emailShell(hero: { title: string; sub: string }, inner: string) {
           <tr><td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e8edf3">
             <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.7">
               <b style="color:#475569">Make travel caring, seamless, and sustainable.</b><br>
-              Need help? Reply to this email or visit <a href="${BASE}/help" style="color:#0b63d6;text-decoration:none">touristleader.com/help</a> &middot; &copy; ${new Date().getFullYear()} TouristLeader.com
+              Need help? Reply to this email or visit <a href="${BASE}/help" style="color:#0b63d6;text-decoration:none">touristleader.com/help</a> &middot; &copy; ${new Date().getFullYear()} Tourist Leader.com
             </p>
           </td></tr>
         </table>
@@ -80,7 +80,7 @@ function getTransporter() {
   return transporter;
 }
 
-const MAIL_FROM = process.env.MAIL_FROM || `TouristLeader <${process.env.SMTP_USER || "no-reply@touristleader.com"}>`;
+const MAIL_FROM = process.env.MAIL_FROM || `Tourist Leader <${process.env.SMTP_USER || "no-reply@touristleader.com"}>`;
 const REPLY_TO = process.env.MAIL_REPLY_TO || process.env.SUPPORT_EMAIL || process.env.SMTP_USER;
 
 /** Strip HTML to a readable plain-text fallback (multipart e-mails land in inbox far more often than HTML-only). */
@@ -108,7 +108,7 @@ async function deliver(opts: { to: string; subject: string; html: string; text?:
     return { skipped: true } as const;
   }
   const unsubMail = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
-  const headers: Record<string, string> = { "X-Mailer": "TouristLeader" };
+  const headers: Record<string, string> = { "X-Mailer": "Tourist Leader" };
   if (!opts.transactional) {
     headers["List-Unsubscribe"] = `<mailto:${unsubMail}?subject=unsubscribe>, <${BASE}/help>`;
     headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
@@ -149,7 +149,7 @@ export async function sendOtpEmail(to: string, otp: string) {
   const html = `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;padding:24px">
     <div style="max-width:440px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
       <div style="background:linear-gradient(135deg,#0a4fa8,#0b63d6);padding:22px;color:#fff">
-        <h1 style="margin:0;font-size:19px">TouristLeader</h1>
+        <h1 style="margin:0;font-size:19px">Tourist Leader</h1>
         <p style="margin:6px 0 0;opacity:.9;font-size:13px">Comfort before, during, and after take off</p>
       </div>
       <div style="padding:26px;text-align:center">
@@ -158,8 +158,8 @@ export async function sendOtpEmail(to: string, otp: string) {
         <p style="color:#9ca3af;font-size:13px;margin:16px 0 0">This code expires in 10 minutes. Don&apos;t share it with anyone.</p>
       </div>
     </div></body></html>`;
-  const text = `Your TouristLeader login code is ${otp}\n\nThis code expires in 10 minutes. Don't share it with anyone.\n\nIf you didn't request this, you can safely ignore this email.\n— TouristLeader`;
-  return deliver({ to, subject: `${otp} is your TouristLeader verification code`, html, text, transactional: true });
+  const text = `Your Tourist Leader login code is ${otp}\n\nThis code expires in 10 minutes. Don't share it with anyone.\n\nIf you didn't request this, you can safely ignore this email.\n— Tourist Leader`;
+  return deliver({ to, subject: `${otp} is your Tourist Leader verification code`, html, text, transactional: true });
 }
 
 export async function sendSupportTicketEmails(t: {

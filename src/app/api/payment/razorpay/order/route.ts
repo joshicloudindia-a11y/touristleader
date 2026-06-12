@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       amount: Math.round(rupees * 100), // paise
       currency: "INR",
       receipt: genBookingRef(),
-      notes: { product: "flight", platform: "TouristLeader" },
+      notes: { product: "flight", platform: "Tourist Leader" },
     });
 
     return NextResponse.json({

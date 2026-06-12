@@ -73,11 +73,11 @@ function Confirmation() {
   const addToCalendar = () => {
     if (!flight) return;
     const summary = `Flight ${flight.airlineName} ${flight.flightNumber} · ${flight.from}→${flight.to}`;
-    const desc = `TouristLeader booking\\nBooking ID: ${ref}\\nPNR: ${pnr}\\n${cityName(flight.from)} (${flight.from}) to ${cityName(flight.to)} (${flight.to})`;
+    const desc = `Tourist Leader booking\\nBooking ID: ${ref}\\nPNR: ${pnr}\\n${cityName(flight.from)} (${flight.from}) to ${cityName(flight.to)} (${flight.to})`;
     const ics = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//TouristLeader//Flight//EN",
+      "PRODID:-//Tourist Leader//Flight//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
       "BEGIN:VEVENT",
@@ -96,16 +96,16 @@ function Confirmation() {
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");
-    download(`TouristLeader-${ref}.ics`, ics, "text/calendar");
+    download(`Tourist Leader-${ref}.ics`, ics, "text/calendar");
     setToast("Calendar event downloaded");
   };
 
   // ---- Share Trip ----
   const shareTrip = async () => {
     const text = flight
-      ? `My TouristLeader trip: ${cityName(flight.from)} → ${cityName(flight.to)} on ${flight.airlineName} ${flight.flightNumber}. PNR ${pnr}, Booking ${ref}.`
-      : `My TouristLeader booking ${ref} (PNR ${pnr}).`;
-    const shareData = { title: "TouristLeader Booking", text, url: typeof window !== "undefined" ? window.location.href : "" };
+      ? `My Tourist Leader trip: ${cityName(flight.from)} → ${cityName(flight.to)} on ${flight.airlineName} ${flight.flightNumber}. PNR ${pnr}, Booking ${ref}.`
+      : `My Tourist Leader booking ${ref} (PNR ${pnr}).`;
+    const shareData = { title: "Tourist Leader Booking", text, url: typeof window !== "undefined" ? window.location.href : "" };
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share(shareData);
@@ -171,8 +171,8 @@ function Confirmation() {
   <div class="inv">
     <div class="top">
       <div class="brand">
-        <img src="${origin}/logo.avif" alt="TouristLeader"/>
-        <div><div class="name">TouristLeader</div><div class="sub">Comfort before, during, and after take off</div></div>
+        <img src="${origin}/logo.avif" alt="Tourist Leader"/>
+        <div><div class="name">Tourist Leader</div><div class="sub">Comfort before, during, and after take off</div></div>
       </div>
       <div class="meta">
         <div class="lbl">Invoice / Booking ID</div><div class="val">${ref}</div>
@@ -203,7 +203,7 @@ function Confirmation() {
     </div>
     <div class="foot">
       Invoice date: ${invDate} &nbsp;&middot;&nbsp; This is a computer-generated invoice and does not require a signature.<br/>
-      Convenience fee is non-refundable. For assistance, contact help@touristleader.com. &copy; ${new Date().getFullYear()} TouristLeader.com
+      Convenience fee is non-refundable. For assistance, contact help@touristleader.com. &copy; ${new Date().getFullYear()} Tourist Leader.com
     </div>
   </div>
   <script>window.onload=function(){setTimeout(function(){window.print()},350)}</script>
@@ -214,7 +214,7 @@ function Confirmation() {
       w.document.close();
     } else {
       // popup blocked — fall back to an HTML download
-      download(`TouristLeader-Invoice-${ref}.html`, html, "text/html");
+      download(`Tourist Leader-Invoice-${ref}.html`, html, "text/html");
       setToast("Invoice downloaded");
     }
   };
@@ -303,9 +303,9 @@ function Confirmation() {
       {/* Invoice modal */}
       <Modal open={invoiceOpen} onClose={() => setInvoiceOpen(false)} title="Tax Invoice">
         <div className="mb-3 flex items-center gap-2.5">
-          <Image src="/logo.avif" alt="TouristLeader" width={36} height={36} className="h-9 w-9 rounded-full object-contain" />
+          <Image src="/logo.avif" alt="Tourist Leader" width={36} height={36} className="h-9 w-9 rounded-full object-contain" />
           <div>
-            <p className="text-sm font-extrabold leading-tight text-slate-900">Tourist<span className="text-brand">Leader</span></p>
+            <p className="text-sm font-extrabold leading-tight text-slate-900">Tourist <span className="text-brand">Leader</span></p>
             <p className="text-[11px] text-slate-400">Comfort before, during, and after take off</p>
           </div>
           <span className="ml-auto rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">● PAID</span>

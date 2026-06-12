@@ -12,9 +12,9 @@ const ICONS: Record<string, React.ElementType> = { Plane, BedDouble, Palmtree, B
 function Logo() {
   return (
     <Link href="/" className="flex items-center gap-2 shrink-0">
-      <Image src="/logo.avif" alt="TouristLeader" width={44} height={44} priority className="h-10 w-10 rounded-full object-contain" />
+      <Image src="/logo.avif" alt="Tourist Leader" width={44} height={44} priority className="h-10 w-10 rounded-full object-contain" />
       <span className="text-lg font-extrabold tracking-tight text-slate-900">
-        Tourist<span className="text-brand">Leader</span>
+        Tourist <span className="text-brand">Leader</span>
       </span>
     </Link>
   );

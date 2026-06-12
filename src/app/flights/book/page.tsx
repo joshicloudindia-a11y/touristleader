@@ -89,7 +89,7 @@ export default function BookPage() {
                   <InfoRow icon={CalendarClock} title="Cancellation & date change"
                     body="Airline rules apply; refunds depend on fare type & timing. Convenience fee non-refundable."
                     popupTitle="Cancellation Policy"
-                    popup={<ul className="space-y-1.5 text-sm text-slate-700"><li>• Airline cancellation rules apply.</li><li>• Refunds depend on fare type and timing of cancellation.</li><li>• TouristLeader convenience fee is non-refundable.</li><li>• No-shows may receive zero refund.</li></ul>} />
+                    popup={<ul className="space-y-1.5 text-sm text-slate-700"><li>• Airline cancellation rules apply.</li><li>• Refunds depend on fare type and timing of cancellation.</li><li>• Tourist Leader convenience fee is non-refundable.</li><li>• No-shows may receive zero refund.</li></ul>} />
                 </div>
               </Section>
 

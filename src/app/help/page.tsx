@@ -18,7 +18,7 @@ const CATEGORIES = [
 ];
 
 const FAQS = [
-  { q: "How do I cancel or reschedule my flight?", a: "Open My Trips, select your booking and choose Cancel or Reschedule. Airline rules and fees apply; the TouristLeader convenience fee is non-refundable." },
+  { q: "How do I cancel or reschedule my flight?", a: "Open My Trips, select your booking and choose Cancel or Reschedule. Airline rules and fees apply; the Tourist Leader convenience fee is non-refundable." },
   { q: "When will I get my refund?", a: "Approved refunds are processed to your original payment method, typically within 5–7 business days depending on the airline and your bank." },
   { q: "I didn't receive my ticket / invoice email.", a: "Check your spam folder. You can also re-download the ticket and invoice anytime from My Trips → View Invoice." },
   { q: "Can I add baggage or meals after booking?", a: "Yes, subject to airline availability. Raise a ticket below with your Booking ID and our team will assist." },

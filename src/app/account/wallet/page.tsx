@@ -42,7 +42,7 @@ export default function CustomerWalletPage() {
     const isHttps = window.location.protocol === "https:";
     const rzp = new window.Razorpay({
       key: order.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, amount: order.amount, currency: order.currency || "INR", order_id: order.orderId,
-      name: "TouristLeader Wallet", description: `Add ${formatINR(amt)} to wallet`,
+      name: "Tourist Leader Wallet", description: `Add ${formatINR(amt)} to wallet`,
       ...(isHttps ? { image: `${window.location.origin}/logo.avif` } : {}),
       prefill: { name: user?.name || "", email: user?.email || "", contact: user?.phone || "", method: "upi" },
       theme: { color: "#0b63d6" },

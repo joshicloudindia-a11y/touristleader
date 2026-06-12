@@ -31,7 +31,7 @@ export const DEMO_OFFERS: Offer[] = [
   {
     id: "2", code: "TLUPI", category: "WALLET", title: "Up to ₹3,000 Cashback", subtitle: "Pay via UPI & win assured wallet cashback",
     discount: "Up to ₹3,000 Cashback", minBooking: "No minimum", validTill: "31 Jul 2026", bg: "from-indigo-500 to-blue-600",
-    terms: ["Pay using any UPI app at checkout.", "Cashback credited to TouristLeader wallet within 24 hours.", "1 cashback per user per week."],
+    terms: ["Pay using any UPI app at checkout.", "Cashback credited to Tourist Leader wallet within 24 hours.", "1 cashback per user per week."],
   },
   {
     id: "3", code: "TLSTUDENT", category: "FLIGHT", title: "Student Special", subtitle: "Extra baggage + up to 10% off base fare",
@@ -56,7 +56,7 @@ export const DEMO_OFFERS: Offer[] = [
   {
     id: "7", code: "TLWALLET", category: "WALLET", title: "₹500 Wallet Bonus", subtitle: "Add ₹2,000 to wallet & get ₹500 extra",
     discount: "₹500 Bonus", minBooking: "Add ₹2,000", validTill: "31 Jul 2026", bg: "from-sky-500 to-cyan-600",
-    terms: ["Add ₹2,000 or more to your TouristLeader wallet.", "Bonus credited instantly.", "One-time per user."],
+    terms: ["Add ₹2,000 or more to your Tourist Leader wallet.", "Bonus credited instantly.", "One-time per user."],
   },
   {
     id: "8", code: "TLSENIOR", category: "FLIGHT", title: "Senior Citizen Fare", subtitle: "Reduced base fare + priority assistance",

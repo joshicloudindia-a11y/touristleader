@@ -93,8 +93,8 @@ export function buildInvoiceHtml(d: InvoiceData, origin: string): string {
   <div class="inv">
     <div class="top">
       <div class="brand">
-        <img src="${origin}/logo.avif" alt="TouristLeader"/>
-        <div><div class="name">TouristLeader</div><div class="sub">Comfort before, during, and after take off</div></div>
+        <img src="${origin}/logo.avif" alt="Tourist Leader"/>
+        <div><div class="name">Tourist Leader</div><div class="sub">Comfort before, during, and after take off</div></div>
       </div>
       <div class="meta">
         <div class="lbl">Invoice / Booking ID</div><div class="val">${d.ref}</div>
@@ -122,7 +122,7 @@ export function buildInvoiceHtml(d: InvoiceData, origin: string): string {
     </div>
     <div class="foot">
       Invoice date: ${d.invDate} &nbsp;&middot;&nbsp; This is a computer-generated invoice and does not require a signature.<br/>
-      Convenience fee is non-refundable. For assistance, contact help@touristleader.com. &copy; ${new Date().getFullYear()} TouristLeader.com
+      Convenience fee is non-refundable. For assistance, contact help@touristleader.com. &copy; ${new Date().getFullYear()} Tourist Leader.com
     </div>
   </div>
   <script>window.onload=function(){setTimeout(function(){window.print()},350)}</script>
@@ -141,7 +141,7 @@ export function openInvoice(html: string, ref: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `TouristLeader-Invoice-${ref}.html`;
+  a.download = `Tourist Leader-Invoice-${ref}.html`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -153,7 +153,7 @@ export async function shareBooking(text: string, onCopied: () => void) {
   const url = typeof window !== "undefined" ? window.location.origin : "";
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
-      await navigator.share({ title: "TouristLeader Booking", text, url });
+      await navigator.share({ title: "Tourist Leader Booking", text, url });
     } else {
       await navigator.clipboard.writeText(`${text} ${url}`);
       onCopied();

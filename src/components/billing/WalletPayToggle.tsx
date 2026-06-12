@@ -15,7 +15,7 @@ export function WalletPayToggle({ total, value, onChange }: { total: number; val
         value ? "border-brand bg-brand/5" : "border-slate-200 bg-white hover:border-brand/40")}>
       <span className={cn("grid h-10 w-10 place-items-center rounded-lg", value ? "bg-brand text-white" : "bg-brand/10 text-brand")}><Wallet size={20} /></span>
       <span className="flex-1">
-        <span className="block text-sm font-semibold text-slate-800">Pay from TouristLeader Wallet</span>
+        <span className="block text-sm font-semibold text-slate-800">Pay from Tourist Leader Wallet</span>
         <span className="block text-xs text-slate-400">Balance {formatINR(balance)}{!enough ? " · insufficient for this booking" : ""}</span>
       </span>
       {enough && <span className={cn("grid h-5 w-5 place-items-center rounded-full border-2", value ? "border-brand bg-brand text-white" : "border-slate-300")}>{value && <Check size={12} />}</span>}

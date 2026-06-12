@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TouristLeader — Flights, Hotels & Holidays | Comfort before, during & after take off",
+  title: "Tourist Leader — Flights, Hotels & Holidays | Comfort before, during & after take off",
   description:
-    "Book flights, hotels, holiday packages, trains, bus and visa with TouristLeader. Make travel caring, seamless, and sustainable.",
+    "Book flights, hotels, holiday packages, trains, bus and visa with Tourist Leader. Make travel caring, seamless, and sustainable.",
   icons: {
     icon: [
       { url: "/icon-64.png", sizes: "64x64", type: "image/png" },

@@ -119,7 +119,7 @@ export default function PaymentPage() {
       amount: order.amount,
       currency: order.currency || "INR",
       order_id: order.orderId,
-      name: "TouristLeader",
+      name: "Tourist Leader",
       description: st.flight ? `Flight ${st.flight.from} → ${st.flight.to}` : "Flight booking",
       ...(isHttps ? { image: `${window.location.origin}/logo.avif` } : {}),
       prefill: {

@@ -156,7 +156,7 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
       )}>
         <Link href="/" className={cn("flex items-center gap-2 border-b border-slate-100 py-4", collapsed ? "lg:justify-center lg:px-0 px-5" : "px-5")}>
           <Image src="/logo.avif" alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-full" />
-          <span className={cn("text-base font-extrabold", collapsed && "lg:hidden")}>Tourist<span className="text-brand">Leader</span></span>
+          <span className={cn("text-base font-extrabold", collapsed && "lg:hidden")}>Tourist <span className="text-brand">Leader</span></span>
         </Link>
         <p className={cn("px-5 pt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400", collapsed && "lg:hidden")}>{roleName}</p>
         {collapsed && <div className="hidden lg:block lg:pt-4" />}
@@ -227,7 +227,7 @@ function AdminLogin({ onAuthed }: { onAuthed: () => void }) {
         <div className="absolute inset-0 flex flex-col justify-between p-10 text-white xl:p-14">
           <div className="flex items-center gap-2.5">
             <span className="grid h-11 w-11 place-items-center rounded-full bg-white"><Image src="/logo.avif" alt="" width={36} height={36} className="h-9 w-9 rounded-full object-contain" /></span>
-            <span className="text-lg font-extrabold">Tourist<span className="text-sky-200">Leader</span></span>
+            <span className="text-lg font-extrabold">Tourist <span className="text-sky-200">Leader</span></span>
           </div>
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur"><ShieldCheck size={13} /> SUPER ADMIN</span>
@@ -239,7 +239,7 @@ function AdminLogin({ onAuthed }: { onAuthed: () => void }) {
               ))}
             </ul>
           </div>
-          <p className="text-xs text-white/60">© {new Date().getFullYear()} TouristLeader.com · Comfort before, during, and after take off</p>
+          <p className="text-xs text-white/60">© {new Date().getFullYear()} Tourist Leader.com · Comfort before, during, and after take off</p>
         </div>
       </div>
 
@@ -248,7 +248,7 @@ function AdminLogin({ onAuthed }: { onAuthed: () => void }) {
         <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center gap-2.5">
           <Image src="/logo.avif" alt="" width={40} height={40} className="h-10 w-10 rounded-full lg:hidden" />
-          <div><p className="text-lg font-extrabold lg:text-xl">Tourist<span className="text-brand">Leader</span></p><p className="text-xs text-slate-400">Super Admin Login</p></div>
+          <div><p className="text-lg font-extrabold lg:text-xl">Tourist <span className="text-brand">Leader</span></p><p className="text-xs text-slate-400">Super Admin Login</p></div>
         </div>
         {step === "email" ? (
           <>

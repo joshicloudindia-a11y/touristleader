@@ -18,10 +18,10 @@ export function Footer() {
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2.5">
               <span className="grid h-11 w-11 place-items-center rounded-full bg-white">
-                <Image src="/logo.avif" alt="TouristLeader" width={40} height={40} className="h-9 w-9 rounded-full object-contain" />
+                <Image src="/logo.avif" alt="Tourist Leader" width={40} height={40} className="h-9 w-9 rounded-full object-contain" />
               </span>
               <span className="text-lg font-extrabold text-white">
-                Tourist<span className="text-sky-400">Leader</span>
+                Tourist <span className="text-sky-400">Leader</span>
               </span>
             </div>
             <p className="mt-3 max-w-xs text-sm text-slate-400">{BRAND.tagline}.</p>
@@ -48,7 +48,7 @@ export function Footer() {
           ))}
         </div>
         <div className="mt-10 border-t border-slate-800 pt-6 text-center text-xs text-slate-500">
-          © {new Date().getFullYear()} TouristLeader.com — All rights reserved. Convenience fee is non-refundable.
+          © {new Date().getFullYear()} Tourist Leader.com — All rights reserved. Convenience fee is non-refundable.
         </div>
       </div>
     </footer>

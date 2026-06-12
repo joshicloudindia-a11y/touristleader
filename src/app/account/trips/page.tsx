@@ -110,7 +110,7 @@ export default function MyTripsPage() {
   };
 
   const share = (b: Booking) => {
-    shareBooking(`My TouristLeader ${KIND_LABEL[kindOf(b)].toLowerCase()} booking: ${routeLabel(b)} on ${formatDate(b.departDate)}. Ref ${b.bookingRef}.`, () => setToast("Trip link copied"));
+    shareBooking(`My Tourist Leader ${KIND_LABEL[kindOf(b)].toLowerCase()} booking: ${routeLabel(b)} on ${formatDate(b.departDate)}. Ref ${b.bookingRef}.`, () => setToast("Trip link copied"));
   };
 
   const [cancelling, setCancelling] = useState("");

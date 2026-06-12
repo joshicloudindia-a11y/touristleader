@@ -1,5 +1,5 @@
 /**
- * Role-Based Access Control for TouristLeader.
+ * Role-Based Access Control for Tourist Leader.
  * Roles are stored in the DB (dynamic) and map to a fixed catalog of permissions.
  * SUPER_ADMIN (ADMIN_EMAILS allowlist) always has every permission.
  */

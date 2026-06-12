@@ -27,9 +27,9 @@ export function StickyNav({ active = "flights" }: { active?: string }) {
     >
       <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4">
         <Link href="/" className="flex shrink-0 items-center gap-2">
-          <Image src="/logo.avif" alt="TouristLeader" width={36} height={36} className="h-8 w-8 rounded-full object-contain" />
+          <Image src="/logo.avif" alt="Tourist Leader" width={36} height={36} className="h-8 w-8 rounded-full object-contain" />
           <span className="hidden text-base font-extrabold tracking-tight text-slate-900 sm:block">
-            Tourist<span className="text-brand">Leader</span>
+            Tourist <span className="text-brand">Leader</span>
           </span>
         </Link>
 

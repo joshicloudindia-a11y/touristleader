@@ -20,10 +20,10 @@ export function HomeHeader() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <span className="grid h-11 w-11 place-items-center rounded-full bg-white shadow">
-            <Image src="/logo.avif" alt="TouristLeader" width={40} height={40} priority className="h-9 w-9 rounded-full object-contain" />
+            <Image src="/logo.avif" alt="Tourist Leader" width={40} height={40} priority className="h-9 w-9 rounded-full object-contain" />
           </span>
           <span className="text-lg font-extrabold tracking-tight text-white drop-shadow">
-            Tourist<span className="text-sky-200">Leader</span>
+            Tourist <span className="text-sky-200">Leader</span>
           </span>
         </Link>
 
