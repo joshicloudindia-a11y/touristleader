@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { HotelSummaryCard, HotelPriceSummary } from "@/components/hotels/HotelBookingSummary";
 import { useHotelBooking } from "@/store/hotel-booking";
 import { useAuth } from "@/store/auth";
+import { useBilling } from "@/lib/useBilling";
+import { WalletPayToggle } from "@/components/billing/WalletPayToggle";
 import { cn, formatINR } from "@/lib/utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -22,18 +24,27 @@ const METHODS = [
 
 export default function HotelPaymentPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const { config, quote } = useBilling();
   const [mounted, setMounted] = useState(false);
   const [method, setMethod] = useState("upi");
   const [processing, setProcessing] = useState(false);
   const [payError, setPayError] = useState("");
+  const [billState, setBillState] = useState("");
+  const [useWallet, setUseWallet] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const st = useHotelBooking.getState();
     if (!st.hotel || !st.guest) router.replace("/hotels");
   }, [router]);
+  useEffect(() => { if (user?.state && !billState) setBillState(user.state); }, [user, billState]);
 
   if (!mounted) return null;
+
+  const subtotal = useHotelBooking.getState().total();
+  const q = quote(subtotal, billState);
+  const grandTotal = subtotal + q.addon;
 
   const finalize = async (total: number, rzp: { razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string }) => {
     const st = useHotelBooking.getState();
@@ -45,7 +56,10 @@ export default function HotelPaymentPage() {
           type: "HOTEL",
           hotel: { name: st.hotel!.name, area: st.hotel!.area, city: st.hotel!.city, image: st.hotel!.image, starRating: st.hotel!.starRating },
           roomName: st.roomName, roomPrice: st.roomPrice, nights: st.nights,
-          query: st.query, guest: st.guest, total, ...rzp,
+          query: st.query, guest: st.guest, total,
+          customerState: billState, serviceCharge: q.serviceCharge, gst: q.gst,
+          ...(useWallet ? { paymentSource: "wallet" } : {}),
+          ...rzp,
         }),
       });
       const data = await res.json();
@@ -59,7 +73,8 @@ export default function HotelPaymentPage() {
     setPayError("");
     setProcessing(true);
     const st = useHotelBooking.getState();
-    const total = st.total();
+    const total = grandTotal;
+    if (useWallet) { await finalize(total, {}); return; }
 
     let order: { orderId?: string; amount?: number; currency?: string; keyId?: string } | null = null;
     try {
@@ -105,8 +120,9 @@ export default function HotelPaymentPage() {
                   <button onClick={() => setPayError("")} className="text-rose-400 hover:text-rose-600"><X size={16} /></button>
                 </div>
               )}
-              <div className="rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-100">
-                <p className="px-3 py-2 text-sm font-bold text-slate-900">Choose payment method</p>
+              <WalletPayToggle total={grandTotal} value={useWallet} onChange={setUseWallet} />
+              <div className={cn("rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-100", useWallet && "opacity-50")}>
+                <p className="px-3 py-2 text-sm font-bold text-slate-900">{useWallet ? "Or choose another method" : "Choose payment method"}</p>
                 {METHODS.map((m) => (
                   <button key={m.id} onClick={() => setMethod(m.id)} className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors", method === m.id ? "bg-brand/5 ring-1 ring-brand" : "hover:bg-slate-50")}>
                     <span className={cn("grid h-10 w-10 place-items-center rounded-lg", method === m.id ? "bg-brand text-white" : "bg-slate-100 text-slate-500")}><m.icon size={20} /></span>
@@ -121,9 +137,9 @@ export default function HotelPaymentPage() {
             </div>
             <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
               <HotelSummaryCard />
-              <HotelPriceSummary cta={
+              <HotelPriceSummary q={q} config={config} state={billState} onState={setBillState} cta={
                 <Button className="w-full" onClick={pay} disabled={processing}>
-                  {processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(useHotelBooking.getState().total())}</>}
+                  {processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(grandTotal)}</>}
                 </Button>
               } />
             </div>

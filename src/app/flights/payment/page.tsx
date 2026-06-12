@@ -10,6 +10,8 @@ import { FlightSummaryCard } from "@/components/booking/FlightSummaryCard";
 import { PriceSummary } from "@/components/booking/PriceSummary";
 import { useBooking } from "@/store/booking";
 import { useAuth } from "@/store/auth";
+import { useBilling } from "@/lib/useBilling";
+import { WalletPayToggle } from "@/components/billing/WalletPayToggle";
 import { cn, formatINR } from "@/lib/utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -27,17 +29,26 @@ const METHODS = [
 
 export default function PaymentPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const { config, quote } = useBilling();
   const [mounted, setMounted] = useState(false);
   const [method, setMethod] = useState("upi");
   const [processing, setProcessing] = useState(false);
   const [payError, setPayError] = useState("");
+  const [billState, setBillState] = useState("");
+  const [useWallet, setUseWallet] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     if (!useBooking.getState().flight) router.replace("/");
   }, [router]);
+  useEffect(() => { if (user?.state && !billState) setBillState(user.state); }, [user, billState]);
 
   if (!mounted) return null;
+
+  const subtotal = useBooking.getState().totalAmount() + 299;
+  const q = quote(subtotal, billState);
+  const grandTotal = subtotal + q.addon;
 
   type RzpFields = { razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string };
 
@@ -50,7 +61,10 @@ export default function PaymentPage() {
         body: JSON.stringify({
           flight: st.flight, fare: st.fare, query: st.query, passengers: st.passengers,
           seats: st.seats, meals: st.meals, contactEmail: st.contactEmail, contactPhone: st.contactPhone,
-          addOns: st.addOns, total, ...rzp,
+          addOns: st.addOns, total,
+          customerState: billState, serviceCharge: q.serviceCharge, gst: q.gst,
+          ...(useWallet ? { paymentSource: "wallet" } : {}),
+          ...rzp,
         }),
       });
       const data = await res.json();
@@ -75,7 +89,10 @@ export default function PaymentPage() {
     setPayError("");
     setProcessing(true);
     const st = useBooking.getState();
-    const total = st.totalAmount() + 299; // include convenience fee
+    const total = grandTotal; // subtotal (incl. convenience) + service charge + GST
+
+    // Pay from wallet — no Razorpay
+    if (useWallet) { await finalizeBooking(total, {}); return; }
 
     // 1. Create a Razorpay order on the server
     let order: { orderId?: string; amount?: number; currency?: string; keyId?: string } | null = null;
@@ -157,8 +174,10 @@ export default function PaymentPage() {
               )}
               <FlightSummaryCard />
 
-              <div className="rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-100">
-                <p className="px-3 py-2 text-sm font-bold text-slate-900">Choose payment method</p>
+              <WalletPayToggle total={grandTotal} value={useWallet} onChange={setUseWallet} />
+
+              <div className={cn("rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-100", useWallet && "opacity-50")}>
+                <p className="px-3 py-2 text-sm font-bold text-slate-900">{useWallet ? "Or choose another method" : "Choose payment method"}</p>
                 {METHODS.map((m) => (
                   <button key={m.id} onClick={() => setMethod(m.id)}
                     className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors", method === m.id ? "bg-brand/5 ring-1 ring-brand" : "hover:bg-slate-50")}>
@@ -201,9 +220,9 @@ export default function PaymentPage() {
             </div>
 
             <div className="lg:sticky lg:top-20 lg:self-start">
-              <PriceSummary cta={
+              <PriceSummary q={q} config={config} state={billState} onState={setBillState} cta={
                 <Button className="w-full" onClick={pay} disabled={processing}>
-                  {processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(useBooking.getState().totalAmount() + 299)}</>}
+                  {processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(grandTotal)}</>}
                 </Button>
               } />
             </div>

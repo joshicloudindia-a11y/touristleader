@@ -1,14 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plane, Ticket, Loader2, ArrowRight, FileText, Share2, Check, Luggage, ShieldAlert, Users, CreditCard, Bus as BusIcon, BedDouble, Armchair, MapPin, Star } from "lucide-react";
+import { Plane, Ticket, Loader2, ArrowRight, FileText, Share2, Check, Luggage, ShieldAlert, Users, CreditCard, Bus as BusIcon, BedDouble, Armchair, MapPin, Star, XCircle } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { AirlineLogo } from "@/components/AirlineLogo";
 import { useAuth } from "@/store/auth";
-import { formatINR, formatDate, formatTime, formatDuration } from "@/lib/utils";
+import { formatINR, formatDate, formatTime, formatDuration, cn } from "@/lib/utils";
 import { AIRPORTS } from "@/lib/constants";
 import { buildInvoiceHtml, openInvoice, shareBooking, type InvoiceData } from "@/lib/invoice";
 
@@ -24,6 +24,7 @@ interface Booking {
   origin: string; destination: string; departDate: string; returnDate: string | null;
   cabinClass: string; fareType: string; adults: number; children: number; infants: number;
   baseFare: number; taxes: number; addOns: number; totalAmount: number;
+  serviceCharge?: number; gstType?: string | null; igst?: number; cgst?: number; sgst?: number;
   contactEmail: string; contactPhone: string; paymentId: string | null; createdAt: string;
   passengers?: Pax[] | null;
   flightData?: FData | null;
@@ -58,8 +59,10 @@ export default function MyTripsPage() {
     else if (kind === "HOTEL") { base = (b.baseFare || 0) * (f.nights || 1); }
     else { base = b.baseFare || 0; pax = b.adults || f.seatIds?.length || 1; } // BUS: stored base is full seats fare
     const addOns = b.addOns || 0;
-    const convenience = Math.max(0, total - base - taxes - addOns);
-    return { kind, pax, base, taxes, addOns, convenience, total };
+    const serviceCharge = b.serviceCharge || 0;
+    const gstTotal = (b.igst || 0) + (b.cgst || 0) + (b.sgst || 0);
+    const convenience = Math.max(0, total - base - taxes - addOns - serviceCharge - gstTotal);
+    return { kind, pax, base, taxes, addOns, convenience, serviceCharge, igst: b.igst || 0, cgst: b.cgst || 0, sgst: b.sgst || 0, gstTotal, gstType: b.gstType, total };
   };
 
   // ---- title/route helpers ----
@@ -100,6 +103,7 @@ export default function MyTripsPage() {
       name: b.passengers?.[0]?.fullName || "Guest", email: b.contactEmail, phone: b.contactPhone,
       dateLabel: formatDate(b.departDate), pax: m.pax,
       base: m.base, taxes: m.taxes, addOns: m.addOns, convenience: m.convenience, total: m.total,
+      serviceCharge: m.serviceCharge, igst: m.igst, cgst: m.cgst, sgst: m.sgst,
       invDate: formatDate(b.createdAt),
     };
     openInvoice(buildInvoiceHtml(data, window.location.origin), b.bookingRef);
@@ -107,6 +111,21 @@ export default function MyTripsPage() {
 
   const share = (b: Booking) => {
     shareBooking(`My TouristLeader ${KIND_LABEL[kindOf(b)].toLowerCase()} booking: ${routeLabel(b)} on ${formatDate(b.departDate)}. Ref ${b.bookingRef}.`, () => setToast("Trip link copied"));
+  };
+
+  const [cancelling, setCancelling] = useState("");
+  const cancelBooking = async (b: Booking) => {
+    if (!confirm(`Cancel this booking (${b.bookingRef})? Your refund will go back to your wallet or original payment method.`)) return;
+    setCancelling(b.id);
+    try {
+      const res = await fetch("/api/bookings/cancel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bookingRef: b.bookingRef }) });
+      const d = await res.json();
+      if (res.ok) {
+        setBookings((bs) => bs.map((x) => x.id === b.id ? { ...x, status: "CANCELLED" } : x));
+        setSelected((s) => s && s.id === b.id ? { ...s, status: "CANCELLED" } : s);
+        setToast(d.message || "Booking cancelled");
+      } else setToast(d.error || "Could not cancel");
+    } catch { setToast("Network error"); } finally { setCancelling(""); }
   };
 
   const CardIcon = ({ b }: { b: Booking }) => {
@@ -137,7 +156,7 @@ export default function MyTripsPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-slate-200 pb-3">
                       <div className="flex items-center gap-2 text-sm">
                         <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-bold text-brand">{KIND_LABEL[k]}</span>
-                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">{b.status}</span>
+                        <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold", b.status === "CANCELLED" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700")}>{b.status}</span>
                         <span className="hidden text-slate-400 sm:inline">{b.bookingRef}</span>
                       </div>
                       <span className="text-sm font-extrabold text-slate-900">{formatINR(b.totalAmount)}</span>
@@ -168,7 +187,7 @@ export default function MyTripsPage() {
             <div>
               <div className="flex items-center justify-between border-b border-dashed border-slate-200 pb-3">
                 <div><p className="text-xs text-slate-400">Booking ID</p><p className="font-bold text-slate-900">{b.bookingRef}</p></div>
-                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">{b.status}</span>
+                <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold", b.status === "CANCELLED" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700")}>{b.status}</span>
                 <div className="text-right"><p className="text-xs text-slate-400">{k === "BUS" ? "Ticket" : k === "HOTEL" ? "Conf. No." : "PNR"}</p><p className="font-bold text-brand">{b.pnr || "—"}</p></div>
               </div>
 
@@ -239,7 +258,11 @@ export default function MyTripsPage() {
                 <Row label={`Base fare${k === "FLIGHT" ? ` × ${m.pax}` : ""}`} value={formatINR(m.base)} />
                 <Row label="Taxes & fees" value={formatINR(m.taxes)} />
                 {m.addOns > 0 && <Row label="Add-ons" value={formatINR(m.addOns)} />}
-                <Row label="Convenience fee" value={formatINR(m.convenience)} />
+                {m.convenience > 0 && <Row label="Convenience fee" value={formatINR(m.convenience)} />}
+                {m.serviceCharge > 0 && <Row label="Service charge" value={formatINR(m.serviceCharge)} />}
+                {m.igst > 0 && <Row label="IGST" value={formatINR(m.igst)} />}
+                {m.cgst > 0 && <Row label="CGST" value={formatINR(m.cgst)} />}
+                {m.sgst > 0 && <Row label="SGST" value={formatINR(m.sgst)} />}
                 <div className="mt-1.5 flex items-center justify-between border-t border-slate-200 pt-1.5 font-extrabold text-slate-900"><span>Total Paid</span><span>{formatINR(m.total)}</span></div>
                 {b.paymentId && <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-400"><CreditCard size={12} /> Payment ID: {b.paymentId}</p>}
               </div>
@@ -256,6 +279,13 @@ export default function MyTripsPage() {
                 <Button variant="outline" onClick={() => invoice(b)}><FileText size={16} /> View Invoice</Button>
                 <Button variant="outline" onClick={() => share(b)}><Share2 size={16} /> Share Trip</Button>
               </div>
+              {b.status === "CANCELLED" ? (
+                <p className="mt-2 rounded-xl bg-slate-100 px-3 py-2.5 text-center text-sm font-semibold text-slate-500">This booking is cancelled.</p>
+              ) : (
+                <Button variant="outline" className="mt-2 w-full !border-rose-200 !text-rose-600 hover:!bg-rose-50" onClick={() => cancelBooking(b)} disabled={cancelling === b.id}>
+                  {cancelling === b.id ? <><Loader2 size={16} className="animate-spin" /> Cancelling…</> : <><XCircle size={16} /> Cancel booking</>}
+                </Button>
+              )}
             </div>
           );
         })()}

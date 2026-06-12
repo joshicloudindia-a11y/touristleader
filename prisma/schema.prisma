@@ -14,12 +14,14 @@ model User {
   email        String             @unique
   phone        String?
   name         String?
+  state        String?            // home/onboarding state (used for GST place-of-supply)
   role         String             @default("USER") // USER | ADMIN
   passwordHash String?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
   bookings     Booking[]
   travellers   TravellerProfile[]
+  wallet       Wallet?
 }
 
 // Saved passenger profiles for quick future bookings
@@ -62,6 +64,22 @@ model Booking {
   addOns        Float    @default(0)
   totalAmount   Float    @default(0)
   currency      String   @default("INR")
+  // --- Service charge + GST (admin-configured, added on top of existing fees) ---
+  serviceCharge Float    @default(0)
+  gstType       String?  // IGST | CGST_SGST | NONE
+  igst          Float    @default(0)
+  cgst          Float    @default(0)
+  sgst          Float    @default(0)
+  customerState String?
+  // --- Agent attribution + commission ---
+  bookedByAgentId String?
+  commission      Float  @default(0)
+  commissionGst   Float  @default(0)
+  // --- Payment + refund ---
+  paymentSource String?  @default("razorpay") // razorpay | wallet | test
+  cancelledAt   DateTime?
+  refundAmount  Float?
+  refundMode    String?  // wallet | razorpay
   paymentId     String?  // razorpay_payment_id
   paymentOrderId String? // razorpay_order_id
   paymentMethod String?  @default("razorpay")
@@ -78,6 +96,7 @@ model Booking {
 
   @@index([userId])
   @@index([bookingRef])
+  @@index([bookedByAgentId])
 }
 
 model SupportTicket {
@@ -113,6 +132,65 @@ model TicketMessage {
   createdAt  DateTime      @default(now())
 
   @@index([ticketId])
+}
+
+// Singleton billing configuration (service charge + GST + agent commission %).
+model BillingConfig {
+  id                      String   @id @default("default")
+  serviceChargeType       String   @default("FLAT") // FLAT | PERCENT
+  serviceChargeValue      Float    @default(0) // rupees (FLAT) or percent of base fare (PERCENT)
+  companyState            String   @default("Karnataka")
+  igstRate                Float    @default(18)
+  cgstRate                Float    @default(9)
+  sgstRate                Float    @default(9)
+  gstEnabled              Boolean  @default(true)
+  agentCommissionPercent  Float    @default(0)
+  commissionGstApplicable Boolean  @default(true)
+  updatedAt               DateTime @updatedAt @default(now())
+}
+
+// One wallet per user (customers store value; agents accrue commission owed).
+model Wallet {
+  id           String              @id @default(cuid())
+  userId       String              @unique
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance      Float               @default(0) // rupees
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  transactions WalletTransaction[]
+
+  @@index([userId])
+}
+
+model WalletTransaction {
+  id           String   @id @default(cuid())
+  walletId     String
+  wallet       Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  userId       String
+  type         String // CREDIT | DEBIT
+  amount       Float
+  reason       String // TOPUP | BOOKING | REFUND | COMMISSION | SETTLEMENT | ADJUSTMENT
+  status       String   @default("COMPLETED") // COMPLETED | PENDING | SETTLED
+  refType      String? // BOOKING | RAZORPAY | SETTLEMENT
+  refId        String?
+  note         String?
+  balanceAfter Float    @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([walletId])
+  @@index([userId])
+}
+
+// Monthly agent commission payout record.
+model Settlement {
+  id        String   @id @default(cuid())
+  agentId   String
+  amount    Float
+  note      String?
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@index([agentId])
 }
 
 model Role {

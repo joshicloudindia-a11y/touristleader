@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { User, ChevronDown, Ticket, LogOut, UserCircle, Heart, LifeBuoy, Headset, LayoutDashboard } from "lucide-react";
+import { User, ChevronDown, Ticket, LogOut, UserCircle, Heart, LifeBuoy, Headset, LayoutDashboard, Wallet } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { AuthModal } from "./AuthModal";
 import { cn } from "@/lib/utils";
@@ -94,6 +94,7 @@ export function AuthButton({ variant = "outline", compact = false }: { variant?:
           {tier === "admin" && <MenuItem icon={LayoutDashboard} label="Admin Panel" onClick={() => { setMenuOpen(false); router.push("/admin"); }} />}
           <MenuItem icon={UserCircle} label="My Account" onClick={() => { setMenuOpen(false); router.push("/account"); }} />
           <MenuItem icon={Ticket} label="My Trips" onClick={() => { setMenuOpen(false); router.push("/account/trips"); }} />
+          <MenuItem icon={Wallet} label="My Wallet" onClick={() => { setMenuOpen(false); router.push("/account/wallet"); }} />
           <MenuItem icon={Heart} label="Wishlist" onClick={() => { setMenuOpen(false); router.push("/account/wishlist"); }} />
           <MenuItem icon={LifeBuoy} label="My Tickets" onClick={() => { setMenuOpen(false); router.push("/account/tickets"); }} />
           <div className="my-1 border-t border-slate-100" />

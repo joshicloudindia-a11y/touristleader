@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { LayoutDashboard, Palmtree, Loader2, ShieldAlert, ExternalLink, LogOut, Mail, ArrowLeft, ShieldCheck, AlertCircle, Ticket, LifeBuoy, Users, ReceiptText, Menu } from "lucide-react";
+import { LayoutDashboard, Palmtree, Loader2, ShieldAlert, ExternalLink, LogOut, Mail, ArrowLeft, ShieldCheck, AlertCircle, Ticket, LifeBuoy, Users, ReceiptText, Menu, SlidersHorizontal, Wallet } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { type Permission } from "@/lib/rbac";
@@ -17,7 +17,9 @@ const NAV: { seg: string; label: string; agentLabel?: string; icon: React.Elemen
   { seg: "enquiries", label: "Package Enquiries", agentLabel: "Leads", icon: Ticket, perm: "enquiries.view" },
   { seg: "tickets", label: "Support Tickets", icon: LifeBuoy, perm: "tickets.view" },
   { seg: "users", label: "Users", icon: Users, perm: "users.view" },
+  { seg: "settlements", label: "Settlements", icon: Wallet, perm: "settlements.manage" },
   { seg: "roles", label: "Roles & Permissions", icon: ShieldCheck, perm: "roles.manage" },
+  { seg: "settings", label: "Settings", icon: SlidersHorizontal, perm: "settings.manage" },
 ];
 
 interface AdminCtxValue { role: string; permissions: Permission[]; can: (p: Permission) => boolean; email: string; basePath: string; tier: string }
@@ -96,6 +98,8 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
   const can = (p: Permission) => permissions.includes(p);
   const hrefFor = (seg: string) => seg ? `${basePath}/${seg}` : basePath;
   const visibleNav = NAV.filter((n) => can(n.perm));
+  // agents get a Wallet entry in their console
+  if (mode === "agent") visibleNav.push({ seg: "wallet", label: "My Wallet", icon: Wallet, perm: "dashboard.view" });
   const navItem = (n: typeof NAV[number]) => {
     const href = hrefFor(n.seg);
     const active = pathname === href || (n.seg !== "" && pathname.startsWith(href));

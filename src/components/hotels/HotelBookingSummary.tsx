@@ -3,6 +3,8 @@ import Image from "next/image";
 import { Star, MapPin, BedDouble, CalendarDays } from "lucide-react";
 import { useHotelBooking, HOTEL_CONVENIENCE } from "@/store/hotel-booking";
 import { formatINR, formatDate } from "@/lib/utils";
+import { ServiceChargeLines, GstStateSelect, type Quote } from "@/components/billing/Billing";
+import type { BillingConfigData } from "@/lib/billing-core";
 
 export function HotelSummaryCard() {
   const { hotel, roomName, nights, query } = useHotelBooking();
@@ -25,12 +27,13 @@ export function HotelSummaryCard() {
   );
 }
 
-export function HotelPriceSummary({ cta }: { cta?: React.ReactNode }) {
+export function HotelPriceSummary({ cta, q, config, state, onState }: { cta?: React.ReactNode; q?: Quote; config?: BillingConfigData; state?: string; onState?: (s: string) => void }) {
   const { roomPrice, nights, hotel } = useHotelBooking();
   if (!hotel) return null;
   const room = roomPrice * nights;
   const taxes = Math.round(room * 0.12);
-  const total = room + taxes + HOTEL_CONVENIENCE;
+  const subtotal = room + taxes + HOTEL_CONVENIENCE;
+  const total = subtotal + (q?.addon || 0);
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
       <h3 className="font-bold text-slate-900">Price Summary</h3>
@@ -38,6 +41,8 @@ export function HotelPriceSummary({ cta }: { cta?: React.ReactNode }) {
         <Row label={`Room price (${formatINR(roomPrice)} × ${nights})`} value={formatINR(room)} />
         <Row label="Taxes & service fees" value={formatINR(taxes)} />
         <Row label="Convenience fee" value={formatINR(HOTEL_CONVENIENCE)} />
+        {onState && <div className="py-1"><GstStateSelect value={state || ""} onChange={onState} /></div>}
+        {q && config && <ServiceChargeLines q={q} config={config} />}
         <div className="my-2 border-t border-dashed border-slate-200" />
         <Row label={<span className="font-bold text-slate-900">Total Amount</span>} value={<span className="text-lg font-extrabold text-slate-900">{formatINR(total)}</span>} />
       </div>

@@ -36,6 +36,7 @@ export interface SessionUser {
   email: string;
   name: string | null;
   phone: string | null;
+  state?: string | null;
 }
 
 export async function hashPassword(pw: string) {
@@ -85,7 +86,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     if (!uid) return null;
     const user = await prisma.user.findUnique({
       where: { id: uid },
-      select: { id: true, email: true, name: true, phone: true },
+      select: { id: true, email: true, name: true, phone: true, state: true },
     });
     return user;
   } catch {

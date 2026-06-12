@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { BusPriceSummary } from "@/components/bus/BusPriceSummary";
 import { useBusBooking } from "@/store/bus-booking";
 import { useAuth } from "@/store/auth";
+import { useBilling } from "@/lib/useBilling";
+import { WalletPayToggle } from "@/components/billing/WalletPayToggle";
 import { formatINR, formatTime } from "@/lib/utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -15,21 +17,30 @@ declare global { interface Window { Razorpay?: any } }
 
 export default function BusPaymentPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const { config, quote } = useBilling();
   const [mounted, setMounted] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [payError, setPayError] = useState("");
+  const [billState, setBillState] = useState("");
+  const [useWallet, setUseWallet] = useState(false);
 
   useEffect(() => { setMounted(true); if (!useBusBooking.getState().bus) router.replace("/bus"); }, [router]);
+  useEffect(() => { if (user?.state && !billState) setBillState(user.state); }, [user, billState]);
   if (!mounted) return null;
   const st0 = useBusBooking.getState();
   if (!st0.bus) return null;
+
+  const subtotal = st0.total();
+  const q = quote(subtotal, billState);
+  const grandTotal = subtotal + q.addon;
 
   const finalize = async (total: number, rzp: { razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string }) => {
     const st = useBusBooking.getState();
     try {
       const res = await fetch("/api/bookings", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "BUS", bus: st.bus, query: st.query, seats: st.seats, boarding: st.boarding, dropping: st.dropping, passengers: st.passengers, contactEmail: st.contactEmail, contactPhone: st.contactPhone, total, ...rzp }),
+        body: JSON.stringify({ type: "BUS", bus: st.bus, query: st.query, seats: st.seats, boarding: st.boarding, dropping: st.dropping, passengers: st.passengers, contactEmail: st.contactEmail, contactPhone: st.contactPhone, total, customerState: billState, serviceCharge: q.serviceCharge, gst: q.gst, ...(useWallet ? { paymentSource: "wallet" } : {}), ...rzp }),
       });
       const data = await res.json();
       if (data.bookingRef) router.push(`/bus/confirmation?ref=${data.bookingRef}&tkt=${data.pnr}`);
@@ -41,7 +52,8 @@ export default function BusPaymentPage() {
     if (!useAuth.getState().user) { useAuth.getState().requireAuth(() => pay()); return; }
     setPayError(""); setProcessing(true);
     const st = useBusBooking.getState();
-    const total = st.total();
+    const total = grandTotal;
+    if (useWallet) { await finalize(total, {}); return; }
     let order: { orderId?: string; amount?: number; currency?: string; keyId?: string } | null = null;
     try { const r = await fetch("/api/payment/razorpay/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount: total }) }); if (r.ok) order = await r.json(); } catch {}
     if (!order?.orderId || typeof window === "undefined" || !window.Razorpay) { await finalize(total, {}); return; }
@@ -74,13 +86,14 @@ export default function BusPaymentPage() {
                 <p className="text-sm text-slate-500">{st0.query?.from} → {st0.query?.to} · {formatTime(bus.departTime)} → {formatTime(bus.arriveTime)}</p>
                 <p className="mt-1 text-xs text-slate-400">Boarding: {st0.boarding?.name} · Dropping: {st0.dropping?.name} · Seats: {st0.seats.map((s) => s.id).join(", ")}</p>
               </div>
+              <WalletPayToggle total={grandTotal} value={useWallet} onChange={setUseWallet} />
               <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
                 <div className="flex items-center gap-1.5 text-xs text-emerald-600"><Lock size={13} /> 100% secure · Payments by <b className="text-[#072654]">Razorpay</b></div>
                 <p className="mt-2 rounded-lg bg-sky-50 px-3 py-2 text-[11px] text-sky-700"><b>Test mode:</b> pay via UPI <b>success@razorpay</b>, then choose Success on the test screen.</p>
               </div>
             </div>
             <div className="lg:sticky lg:top-20 lg:self-start">
-              <BusPriceSummary cta={<Button className="w-full" onClick={pay} disabled={processing}>{processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(st0.total())}</>}</Button>} />
+              <BusPriceSummary q={q} config={config} state={billState} onState={setBillState} cta={<Button className="w-full" onClick={pay} disabled={processing}>{processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(grandTotal)}</>}</Button>} />
             </div>
           </div>
         </div>

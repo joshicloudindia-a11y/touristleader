@@ -27,6 +27,10 @@ export interface InvoiceData {
   taxes: number;
   addOns: number;
   convenience: number;
+  serviceCharge?: number;
+  igst?: number;
+  cgst?: number;
+  sgst?: number;
   total: number;
   invDate: string;
 }
@@ -41,7 +45,11 @@ export function buildInvoiceHtml(d: InvoiceData, origin: string): string {
     ["Base fare", `× ${d.pax} ${unitWord}${d.pax > 1 ? "s" : ""}`, formatINR(d.base)],
     ["Taxes & fees", "", formatINR(d.taxes)],
     ...(d.addOns > 0 ? [["Add-ons", "", formatINR(d.addOns)]] : []),
-    ["Convenience fee", "non-refundable", formatINR(d.convenience)],
+    ...(d.convenience > 0 ? [["Convenience fee", "non-refundable", formatINR(d.convenience)]] : []),
+    ...(d.serviceCharge && d.serviceCharge > 0 ? [["Service charge", "", formatINR(d.serviceCharge)]] : []),
+    ...(d.igst && d.igst > 0 ? [["IGST", "", formatINR(d.igst)]] : []),
+    ...(d.cgst && d.cgst > 0 ? [["CGST", "", formatINR(d.cgst)]] : []),
+    ...(d.sgst && d.sgst > 0 ? [["SGST", "", formatINR(d.sgst)]] : []),
   ];
   const detailsTitle = d.detailsTitle || (kind === "BUS" ? "Bus Details" : kind === "HOTEL" ? "Stay Details" : "Flight Details");
   const detailLines = d.detailLines || [

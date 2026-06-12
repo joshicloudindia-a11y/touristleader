@@ -15,7 +15,9 @@ export type Permission =
   | "users.view"
   | "users.manage"
   | "users.manage_roles"
-  | "roles.manage";
+  | "roles.manage"
+  | "settings.manage"
+  | "settlements.manage";
 
 export interface PermissionGroup { title: string; items: { key: Permission; label: string }[] }
 
@@ -40,6 +42,10 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     { key: "users.manage_roles", label: "Assign roles to users" },
   ] },
   { title: "Roles & Permissions", items: [{ key: "roles.manage", label: "Manage roles & permissions" }] },
+  { title: "Settings & Settlements", items: [
+    { key: "settings.manage", label: "Manage billing & GST settings" },
+    { key: "settlements.manage", label: "View wallets & settle agent commission" },
+  ] },
 ];
 
 export const ALL_PERMISSIONS: Permission[] = PERMISSION_GROUPS.flatMap((g) => g.items.map((i) => i.key));
@@ -54,6 +60,7 @@ export const SYSTEM_ROLES: { key: string; name: string; description: string; per
   { key: "ADMIN", name: "Admin", description: "Manage content, bookings, enquiries and tickets.", permissions: [
     "dashboard.view", "bookings.view", "packages.view", "packages.manage",
     "enquiries.view", "enquiries.manage", "tickets.view", "tickets.manage", "users.view",
+    "settings.manage", "settlements.manage",
   ] },
   { key: "AGENT", name: "Agent", description: "Sales & support desk — works leads, bookings and tickets on behalf of customers.", permissions: [
     "dashboard.view", "bookings.view", "enquiries.view", "enquiries.manage", "tickets.view", "tickets.manage",
@@ -72,7 +79,7 @@ export function grantsAdminAccess(perms: string[] | undefined): boolean {
 }
 
 /** Permissions only the admin tier holds. A role with any of these → admin (uses /admin); otherwise it's an agent (uses /agent). */
-export const ADMIN_ONLY_PERMISSIONS: Permission[] = ["packages.manage", "users.view", "users.manage", "users.manage_roles", "roles.manage"];
+export const ADMIN_ONLY_PERMISSIONS: Permission[] = ["packages.manage", "users.view", "users.manage", "users.manage_roles", "roles.manage", "settings.manage", "settlements.manage"];
 
 /** Admin tier = has an admin-only permission. Agents (tickets/enquiries/bookings only) are NOT admin tier. */
 export function isAdminTier(perms: string[] | undefined): boolean {
