@@ -237,6 +237,31 @@ model Package {
   @@index([slug])
 }
 
+model VisaEnquiry {
+  id         String   @id @default(cuid())
+  enquiryNo  String   @unique
+  userId     String?
+  country    String
+  onwardDate String? // tentative
+  returnDate String?
+  purpose    String // Tourism | Friend and Family Visit | Pilgrims Visit | Expo/Exhibition | Work/Job Search | Others
+  travellers Int      @default(1)
+  name       String
+  email      String
+  phone      String
+  message    String?  @db.Text
+  status     String   @default("NEW") // NEW | CONTACTED | PROCESSING | APPROVED | CLOSED
+  source     String   @default("WEB")
+  assignedTo String?
+  note       String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([enquiryNo])
+}
+
 model PackageEnquiry {
   id           String   @id @default(cuid())
   enquiryNo    String   @unique

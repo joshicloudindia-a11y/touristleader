@@ -231,6 +231,41 @@ export async function sendPackageEnquiryEmails(e: {
   return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
 }
 
+export async function sendVisaEnquiryEmails(e: {
+  enquiryNo: string; country: string; purpose: string; travellers: number;
+  onwardDate?: string; returnDate?: string; name: string; email: string; phone: string; message?: string;
+}) {
+  const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
+  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">
+    <h2 style="color:#0b63d6">New Visa Enquiry · ${e.enquiryNo}</h2>
+    <table style="font-size:14px">
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Country</td><td><b>${e.country}</b></td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Purpose</td><td>${e.purpose}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Travellers</td><td>${e.travellers}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Onward</td><td>${e.onwardDate || "-"}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Return</td><td>${e.returnDate || "-"}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Contact</td><td>${e.name} · ${e.email} · ${e.phone}</td></tr>
+    </table>
+    ${e.message ? `<p style="margin-top:12px;background:#f8fafc;padding:12px;border-radius:8px">${e.message}</p>` : ""}</div>`;
+
+  const inner = `
+    ${refBar("Enquiry No.", e.enquiryNo, "Country", e.country.length > 22 ? e.country.slice(0, 22) + "…" : e.country)}
+    <p style="margin:0 0 10px;color:#475569;font-size:14px">Hi ${e.name}, thanks for your visa enquiry for <b>${e.country}</b>. Our visa expert will reach out shortly to guide you through the process.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">
+      <tr><td style="padding:4px 0;color:#64748b">Purpose</td><td align="right" style="font-weight:600">${e.purpose}</td></tr>
+      <tr><td style="padding:4px 0;color:#64748b">Travellers</td><td align="right" style="font-weight:600">${e.travellers}</td></tr>
+      <tr><td style="padding:4px 0;color:#64748b">Tentative dates</td><td align="right" style="font-weight:600">${e.onwardDate || "Flexible"}${e.returnDate ? ` → ${e.returnDate}` : ""}</td></tr>
+    </table>
+    ${sectionTitle("What's next")}
+    <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">Our team will contact you with the document checklist, fees and processing time. You can also call us at +91 9987-495-897.</p>`;
+
+  const r = await Promise.all([
+    deliver({ to: inbox, replyTo: e.email, subject: `Visa Enquiry ${e.enquiryNo} · ${e.country}`, html: team, transactional: true }),
+    deliver({ to: e.email, subject: `We've got your visa enquiry — ${e.country} (${e.enquiryNo})`, html: emailShell({ title: "Visa Enquiry Received", sub: e.country }, inner), transactional: true }),
+  ]);
+  return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
+}
+
 export async function sendTicketReplyEmail(opts: {
   to: string; ticketNo: string; subject: string; body: string; toCustomer: boolean; customerName?: string;
 }) {
