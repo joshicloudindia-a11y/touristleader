@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { LayoutDashboard, Palmtree, Loader2, ShieldAlert, ExternalLink, LogOut, Mail, ArrowLeft, ShieldCheck, AlertCircle, Ticket, LifeBuoy, Users, ReceiptText, Menu, SlidersHorizontal, Wallet, Headset, FileText, Banknote, Store } from "lucide-react";
+import { LayoutDashboard, Palmtree, Loader2, ShieldAlert, ExternalLink, LogOut, Mail, ArrowLeft, ShieldCheck, AlertCircle, Ticket, LifeBuoy, Users, ReceiptText, Menu, SlidersHorizontal, Wallet, Headset, FileText, Banknote, Store, Umbrella } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { type Permission } from "@/lib/rbac";
@@ -20,6 +20,7 @@ const NAV: { seg: string; label: string; agentLabel?: string; icon: React.Elemen
   { seg: "visa-enquiries", label: "Visa Enquiries", icon: FileText, perm: "enquiries.view" },
   { seg: "forex-enquiries", label: "Forex Enquiries", icon: Banknote, perm: "enquiries.view" },
   { seg: "partner-enquiries", label: "Partner Enquiries", icon: Store, perm: "enquiries.view" },
+  { seg: "insurance-enquiries", label: "Insurance Enquiries", icon: Umbrella, perm: "enquiries.view" },
   { seg: "tickets", label: "Support Tickets", icon: LifeBuoy, perm: "tickets.view" },
   { seg: "users", label: "Users", icon: Users, perm: "users.view" },
   { seg: "settlements", label: "Settlements", icon: Wallet, perm: "settlements.manage" },

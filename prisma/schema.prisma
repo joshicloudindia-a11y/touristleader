@@ -237,6 +237,28 @@ model Package {
   @@index([slug])
 }
 
+model InsuranceEnquiry {
+  id        String   @id @default(cuid())
+  enquiryNo String   @unique
+  userId    String?
+  type      String // TRAVEL | MOTOR | HOUSE | LIFE
+  name      String
+  email     String
+  phone     String
+  city      String?
+  details   Json? // type-specific (citizen, destination, dates, travellers, vehicleType, registration, etc.)
+  message   String?  @db.Text
+  status    String   @default("NEW") // NEW | CONTACTED | QUOTED | ISSUED | CLOSED
+  source    String   @default("WEB")
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([enquiryNo])
+}
+
 model PartnerEnquiry {
   id        String   @id @default(cuid())
   enquiryNo String   @unique
