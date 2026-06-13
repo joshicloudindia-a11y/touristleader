@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { walletTxn } from "@/lib/billing";
 import { refundPayment } from "@/lib/razorpay";
+import { sendCancellationEmail, bookingCancellationEmailHtml } from "@/lib/mailer";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,30 @@ export async function POST(req: NextRequest) {
     where: { id: booking.id },
     data: { status: "CANCELLED", cancelledAt: new Date(), refundAmount, refundMode: refundMode === "none" ? null : refundMode },
   });
+
+  // Send the cancellation email with full details + refund info (awaited so it
+  // actually goes out before this serverless function suspends).
+  const to = booking.contactEmail || user.email;
+  if (to) {
+    const travellers = (booking.adults || 0) + (booking.children || 0) + (booking.infants || 0);
+    const fmtDate = (d: Date) => new Date(d).toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+    const cancelledAt = new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const html = bookingCancellationEmailHtml({
+      name: user.name || to.split("@")[0],
+      bookingRef,
+      bookingType: booking.bookingType,
+      origin: booking.origin,
+      destination: booking.destination,
+      travelDate: fmtDate(booking.departDate),
+      travellers: travellers || 1,
+      totalPaid: amount,
+      refundAmount,
+      refundMode,
+      refundMessage: message,
+      cancelledAt,
+    });
+    await sendCancellationEmail({ to, bookingRef, html }).catch((e) => console.error("[cancel] email failed:", (e as Error).message));
+  }
 
   return NextResponse.json({ ok: true, refundMode, refundAmount, message });
 }

@@ -1,13 +1,38 @@
 import nodemailer from "nodemailer";
 import { AIRPORTS } from "./constants";
 
-const BASE = (process.env.NEXT_PUBLIC_BASE_URL || "https://touristleader.com").replace(/\/$/, "");
+// Resolve to a *live* origin so the logo image actually loads in e-mail clients.
+// Prefer an explicit base URL, then the Vercel production/deploy URL, then the
+// known-live deployment (the bare touristleader.com domain isn't live yet).
+const BASE = (
+  process.env.NEXT_PUBLIC_BASE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "") ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+  "https://touristleader.vercel.app"
+).replace(/\/$/, "");
 const LOGO = `${BASE}/logo.png`;
+
+/** Compact logo + brand header for the plain (non-shell) e-mails so every message is branded. */
+function brandBar() {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px"><tr>
+    <td style="background:linear-gradient(135deg,#0a4fa8 0%,#0b63d6 55%,#38bdf8 100%);border-radius:12px;padding:13px 18px">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:middle"><img src="${LOGO}" alt="Tourist Leader" width="38" height="38" style="display:block;border-radius:50%;background:#fff;padding:3px"></td>
+        <td style="vertical-align:middle;padding-left:10px">
+          <div style="font-size:17px;font-weight:800;color:#fff;line-height:1">Tourist Leader</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:3px">Comfort before, during, and after take off</div>
+        </td>
+      </tr></table>
+    </td></tr></table>`;
+}
 const inr = (n: number) => `₹${Math.round(n || 0).toLocaleString("en-IN")}`;
 const cityName = (code: string) => AIRPORTS.find((a) => a.code === code)?.city || code;
 
 /** Branded responsive email shell (table-based for client compatibility). */
-function emailShell(hero: { title: string; sub: string }, inner: string) {
+function emailShell(hero: { title: string; sub: string; icon?: string; iconBg?: string; iconColor?: string }, inner: string) {
+  const icon = hero.icon ?? "&#10003;";
+  const iconBg = hero.iconBg ?? "#dcfce7";
+  const iconColor = hero.iconColor ?? "#16a34a";
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
   <body style="margin:0;background:#eef2f7;font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#1e293b">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:24px 12px">
@@ -23,7 +48,7 @@ function emailShell(hero: { title: string; sub: string }, inner: string) {
             </tr></table>
           </td></tr>
           <tr><td style="padding:26px 28px 8px;text-align:center">
-            <div style="display:inline-block;width:54px;height:54px;line-height:54px;border-radius:50%;background:#dcfce7;color:#16a34a;font-size:28px;font-weight:700">&#10003;</div>
+            <div style="display:inline-block;width:54px;height:54px;line-height:54px;border-radius:50%;background:${iconBg};color:${iconColor};font-size:28px;font-weight:700">${icon}</div>
             <h1 style="margin:14px 0 2px;font-size:22px;color:#0f172a">${hero.title}</h1>
             <p style="margin:0;color:#64748b;font-size:14px">${hero.sub}</p>
           </td></tr>
@@ -148,8 +173,9 @@ export async function sendBookingEmail(opts: {
 export async function sendOtpEmail(to: string, otp: string) {
   const html = `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;padding:24px">
     <div style="max-width:440px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
-      <div style="background:linear-gradient(135deg,#0a4fa8,#0b63d6);padding:22px;color:#fff">
-        <h1 style="margin:0;font-size:19px">Tourist Leader</h1>
+      <div style="background:linear-gradient(135deg,#0a4fa8,#0b63d6);padding:22px;color:#fff;text-align:center">
+        <img src="${LOGO}" alt="Tourist Leader" width="46" height="46" style="display:inline-block;border-radius:50%;background:#fff;padding:3px">
+        <h1 style="margin:10px 0 0;font-size:19px">Tourist Leader</h1>
         <p style="margin:6px 0 0;opacity:.9;font-size:13px">Comfort before, during, and after take off</p>
       </div>
       <div style="padding:26px;text-align:center">
@@ -169,7 +195,7 @@ export async function sendSupportTicketEmails(t: {
   const supportInbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
 
   // 1. Notify the support team
-  const teamHtml = `<div style="font-family:Arial,sans-serif;max-width:560px">
+  const teamHtml = `<div style="font-family:Arial,sans-serif;max-width:560px">${brandBar()}
     <h2 style="color:#0b63d6">New Support Ticket · ${t.ticketNo}</h2>
     <table style="font-size:14px;border-collapse:collapse">
       <tr><td style="padding:4px 12px 4px 0;color:#64748b">Category</td><td><b>${t.category}</b></td></tr>
@@ -183,8 +209,13 @@ export async function sendSupportTicketEmails(t: {
   // 2. Acknowledge the customer
   const userHtml = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
     <div style="background:linear-gradient(135deg,#0a4fa8,#0b63d6);padding:20px;color:#fff">
-      <h2 style="margin:0;font-size:18px">We've received your request</h2>
-      <p style="margin:6px 0 0;opacity:.9;font-size:13px">Comfort before, during, and after take off</p>
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:middle"><img src="${LOGO}" alt="Tourist Leader" width="38" height="38" style="display:block;border-radius:50%;background:#fff;padding:3px"></td>
+        <td style="vertical-align:middle;padding-left:10px">
+          <h2 style="margin:0;font-size:18px">We've received your request</h2>
+          <p style="margin:5px 0 0;opacity:.9;font-size:13px">Comfort before, during, and after take off</p>
+        </td>
+      </tr></table>
     </div>
     <div style="padding:22px">
       <p style="margin:0 0 10px">Hi ${t.name}, thanks for reaching out. Your support ticket has been created — our team will get back to you shortly.</p>
@@ -206,7 +237,7 @@ export async function sendPackageEnquiryEmails(e: {
 }) {
   const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
 
-  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">
+  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">${brandBar()}
     <h2 style="color:#0b63d6">New Holiday Package Enquiry · ${e.enquiryNo}</h2>
     <table style="font-size:14px"><tr><td style="padding:4px 12px 4px 0;color:#64748b">Package</td><td><b>${e.packageTitle}</b></td></tr>
     <tr><td style="padding:4px 12px 4px 0;color:#64748b">Travel month</td><td>${e.travelMonth || "-"}</td></tr>
@@ -236,7 +267,7 @@ export async function sendVisaEnquiryEmails(e: {
   onwardDate?: string; returnDate?: string; name: string; email: string; phone: string; message?: string;
 }) {
   const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
-  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">
+  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">${brandBar()}
     <h2 style="color:#0b63d6">New Visa Enquiry · ${e.enquiryNo}</h2>
     <table style="font-size:14px">
       <tr><td style="padding:4px 12px 4px 0;color:#64748b">Country</td><td><b>${e.country}</b></td></tr>
@@ -272,7 +303,7 @@ export async function sendInsuranceEnquiryEmails(e: {
 }) {
   const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
   const detailRows = (e.detailLines || []).map((l) => `<tr><td colspan="2" style="padding:2px 0;color:#334155">${l}</td></tr>`).join("");
-  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">
+  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">${brandBar()}
     <h2 style="color:#0b63d6">New ${e.typeLabel} Enquiry · ${e.enquiryNo}</h2>
     <table style="font-size:14px">
       ${detailRows}
@@ -301,7 +332,7 @@ export async function sendPartnerEnquiryEmails(e: {
   const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
   const typeLabel = e.type === "TL_BIZ" ? "TL Biz · Business Travel" : "List Your Property";
   const detailRows = (e.detailLines || []).map((l) => `<tr><td colspan="2" style="padding:2px 0;color:#334155">${l}</td></tr>`).join("");
-  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">
+  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">${brandBar()}
     <h2 style="color:#0b63d6">New ${typeLabel} Enquiry · ${e.enquiryNo}</h2>
     <table style="font-size:14px">
       ${e.company ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">${e.type === "TL_BIZ" ? "Company" : "Property"}</td><td><b>${e.company}</b></td></tr>` : ""}
@@ -330,7 +361,7 @@ export async function sendForexEnquiryEmails(e: {
 }) {
   const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
   const typeLabel = e.type === "CARD" ? "Multi-Currency Forex Card" : "Foreign Currency Notes";
-  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">
+  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">${brandBar()}
     <h2 style="color:#0b63d6">New Forex Enquiry · ${e.enquiryNo}</h2>
     <table style="font-size:14px">
       <tr><td style="padding:4px 12px 4px 0;color:#64748b">Request</td><td><b>${typeLabel}</b></td></tr>
@@ -491,4 +522,55 @@ export function hotelBookingEmailHtml(data: {
     <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">Carry a valid government photo ID at check-in. Show this confirmation (Booking ID ${data.bookingRef}) at the hotel reception. Convenience fee is non-refundable.</p>`;
 
   return emailShell({ title: "Stay Booked", sub: `${data.hotelName}, ${data.city} · ${data.checkIn} → ${data.checkOut}` }, inner);
+}
+
+export function bookingCancellationEmailHtml(data: {
+  name: string;
+  bookingRef: string;
+  bookingType: string; // FLIGHT | HOTEL | BUS
+  origin: string;
+  destination: string;
+  travelDate: string; // pre-formatted
+  travellers: number;
+  totalPaid: number;
+  refundAmount: number;
+  refundMode: "wallet" | "razorpay" | "none";
+  refundMessage: string;
+  cancelledAt: string; // pre-formatted
+}) {
+  const typeLabel = data.bookingType === "HOTEL" ? "Hotel Booking" : data.bookingType === "BUS" ? "Bus Ticket" : "Flight Booking";
+  const isHotel = data.bookingType === "HOTEL";
+  const routeLabel = isHotel ? (data.destination || data.origin || "—") : `${cityName(data.origin)} → ${cityName(data.destination)}`;
+  const refundRows: [string, string][] = [
+    ["Amount paid", inr(data.totalPaid)],
+    ["Refund amount", data.refundAmount > 0 ? inr(data.refundAmount) : "—"],
+    ["Refund to", data.refundMode === "wallet" ? "Tourist Leader Wallet" : data.refundMode === "razorpay" ? "Original payment method" : "To be processed manually"],
+  ];
+  const inner = `
+    ${refBar("Booking ID", data.bookingRef, "Status", "Cancelled")}
+    <p style="margin:0 0 10px;color:#475569;font-size:14px">Hi ${data.name}, your booking has been <b style="color:#dc2626">cancelled</b> as requested. Here are the full details.</p>
+    ${sectionTitle(typeLabel)}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">
+      <tr><td style="padding:4px 0;color:#64748b">${isHotel ? "Hotel / City" : "Route"}</td><td align="right" style="font-weight:600">${routeLabel}</td></tr>
+      <tr><td style="padding:4px 0;color:#64748b">${isHotel ? "Check-in" : "Travel date"}</td><td align="right" style="font-weight:600">${data.travelDate}</td></tr>
+      <tr><td style="padding:4px 0;color:#64748b">${isHotel ? "Guests" : "Travellers"}</td><td align="right" style="font-weight:600">${data.travellers}</td></tr>
+      <tr><td style="padding:4px 0;color:#64748b">Cancelled on</td><td align="right" style="font-weight:600">${data.cancelledAt}</td></tr>
+    </table>
+    ${sectionTitle("Refund")}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">
+      ${refundRows.map(([l, v]) => `<tr><td style="padding:6px 0;color:#64748b;border-bottom:1px solid #f1f5f9">${l}</td><td align="right" style="padding:6px 0;font-weight:700;color:#0f172a;border-bottom:1px solid #f1f5f9">${v}</td></tr>`).join("")}
+    </table>
+    <p style="margin:12px 0 0;background:#fff7ed;border-left:3px solid #f59e0b;border-radius:8px;padding:12px 14px;color:#92400e;font-size:13px;line-height:1.6">${data.refundMessage}</p>
+    ${sectionTitle("Good to know")}
+    <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">The convenience fee is non-refundable. If you didn't request this cancellation or need any help, just reply to this email or visit <a href="${BASE}/help" style="color:#0b63d6;text-decoration:none">our help centre</a>.</p>`;
+  return emailShell({ title: "Booking Cancelled", sub: `${typeLabel} · ${data.bookingRef}`, icon: "&#10005;", iconBg: "#fee2e2", iconColor: "#dc2626" }, inner);
+}
+
+export async function sendCancellationEmail(opts: { to: string; bookingRef: string; html: string }) {
+  return deliver({
+    to: opts.to,
+    subject: `Booking Cancelled · ${opts.bookingRef}`,
+    html: opts.html,
+    transactional: true,
+  });
 }
