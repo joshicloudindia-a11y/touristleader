@@ -6,19 +6,17 @@ import { createPortal } from "react-dom";
 import { Store, Briefcase, Luggage, Heart, Menu, X } from "lucide-react";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { CurrencyLanguageMenu } from "@/components/CurrencyLanguageMenu";
-import { usePreferences, useSyncHtmlLang } from "@/store/preferences";
-import { strings } from "@/lib/preferences";
+import { useT, useSyncHtmlLang } from "@/store/preferences";
 
 export function HomeHeader() {
   const [open, setOpen] = useState(false);
-  const language = usePreferences((s) => s.language);
+  const t = useT();
   useSyncHtmlLang();
-  const t = strings(language);
   const UTILITY = [
-    { icon: Store, title: t.listProperty, sub: t.listPropertySub, href: "/list-property" },
-    { icon: Briefcase, title: t.tlBiz, sub: t.tlBizSub, href: "/tl-biz" },
-    { icon: Luggage, title: t.myTrips, sub: t.myTripsSub, href: "/account/trips" },
-    { icon: Heart, title: t.wishlist, sub: t.wishlistSub, href: "/account/wishlist" },
+    { icon: Store, title: t("nav_listProperty"), sub: t("nav_listPropertySub"), href: "/list-property" },
+    { icon: Briefcase, title: t("nav_tlBiz"), sub: t("nav_tlBizSub"), href: "/tl-biz" },
+    { icon: Luggage, title: t("nav_myTrips"), sub: t("nav_myTripsSub"), href: "/account/trips" },
+    { icon: Heart, title: t("nav_wishlist"), sub: t("nav_wishlistSub"), href: "/account/wishlist" },
   ];
   // lock scroll while the mobile menu overlay is open
   useEffect(() => {

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { User, ChevronDown, Ticket, LogOut, UserCircle, Heart, LifeBuoy, Headset, LayoutDashboard, Wallet } from "lucide-react";
 import { useAuth } from "@/store/auth";
+import { useT } from "@/store/preferences";
 import { AuthModal } from "./AuthModal";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +12,7 @@ type Variant = "outline" | "pill";
 
 export function AuthButton({ variant = "outline", compact = false }: { variant?: Variant; compact?: boolean }) {
   const router = useRouter();
+  const t = useT();
   const { user, fetched, fetchMe, logout } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -65,7 +67,7 @@ export function AuthButton({ variant = "outline", compact = false }: { variant?:
     return (
       <>
         <button onClick={() => setAuthOpen(true)} className={cn("flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold", cls)}>
-          <User size={16} /> <span className={compact ? "hidden sm:inline" : ""}>Login / Signup</span>
+          <User size={16} /> <span className={compact ? "hidden sm:inline" : ""}>{t("auth_login")}</span>
           <ChevronDown size={13} />
         </button>
         <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
@@ -79,7 +81,7 @@ export function AuthButton({ variant = "outline", compact = false }: { variant?:
         className={cn("flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 text-sm font-bold",
           variant === "pill" ? "bg-white text-slate-800 shadow" : "border border-slate-300 text-slate-700 hover:border-brand")}>
         <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-brand to-sky-400 text-xs text-white">{initial}</span>
-        <span className="hidden max-w-[90px] truncate sm:inline">Hi, {firstName}</span>
+        <span className="hidden max-w-[90px] truncate sm:inline">{t("auth_hi")}, {firstName}</span>
         <ChevronDown size={13} className={cn("transition-transform", menuOpen && "rotate-180")} />
       </button>
 
@@ -90,15 +92,15 @@ export function AuthButton({ variant = "outline", compact = false }: { variant?:
             <p className="truncate text-sm font-bold text-slate-900">{user.name || firstName}</p>
             <p className="truncate text-xs text-slate-400">{user.email}</p>
           </div>
-          {tier === "agent" && <MenuItem icon={Headset} label="Agent Console" onClick={() => { setMenuOpen(false); router.push("/agent"); }} />}
-          {tier === "admin" && <MenuItem icon={LayoutDashboard} label="Admin Panel" onClick={() => { setMenuOpen(false); router.push("/admin"); }} />}
-          <MenuItem icon={UserCircle} label="My Account" onClick={() => { setMenuOpen(false); router.push("/account"); }} />
-          <MenuItem icon={Ticket} label="My Trips" onClick={() => { setMenuOpen(false); router.push("/account/trips"); }} />
-          <MenuItem icon={Wallet} label="My Wallet" onClick={() => { setMenuOpen(false); router.push("/account/wallet"); }} />
-          <MenuItem icon={Heart} label="Wishlist" onClick={() => { setMenuOpen(false); router.push("/account/wishlist"); }} />
-          <MenuItem icon={LifeBuoy} label="My Tickets" onClick={() => { setMenuOpen(false); router.push("/account/tickets"); }} />
+          {tier === "agent" && <MenuItem icon={Headset} label={t("auth_agentConsole")} onClick={() => { setMenuOpen(false); router.push("/agent"); }} />}
+          {tier === "admin" && <MenuItem icon={LayoutDashboard} label={t("auth_adminPanel")} onClick={() => { setMenuOpen(false); router.push("/admin"); }} />}
+          <MenuItem icon={UserCircle} label={t("auth_myAccount")} onClick={() => { setMenuOpen(false); router.push("/account"); }} />
+          <MenuItem icon={Ticket} label={t("auth_myTrips")} onClick={() => { setMenuOpen(false); router.push("/account/trips"); }} />
+          <MenuItem icon={Wallet} label={t("auth_myWallet")} onClick={() => { setMenuOpen(false); router.push("/account/wallet"); }} />
+          <MenuItem icon={Heart} label={t("auth_wishlist")} onClick={() => { setMenuOpen(false); router.push("/account/wishlist"); }} />
+          <MenuItem icon={LifeBuoy} label={t("auth_myTickets")} onClick={() => { setMenuOpen(false); router.push("/account/tickets"); }} />
           <div className="my-1 border-t border-slate-100" />
-          <MenuItem icon={LogOut} label="Logout" danger onClick={async () => { setMenuOpen(false); await logout(); router.refresh(); }} />
+          <MenuItem icon={LogOut} label={t("auth_logout")} danger onClick={async () => { setMenuOpen(false); await logout(); router.refresh(); }} />
         </div>,
         document.body
       )}

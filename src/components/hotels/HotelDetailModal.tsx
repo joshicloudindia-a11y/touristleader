@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import type { Hotel } from "@/lib/hotel-types";
 import { HOTEL_IMAGES } from "@/lib/hotel-constants";
-import { formatINR } from "@/lib/utils";
+import { useMoney } from "@/store/preferences";
 
 const ICONS: Record<string, React.ElementType> = {
   "Free WiFi": Wifi, Breakfast: Utensils, "Swimming Pool": Waves, Parking: Car, Gym: Dumbbell, Bar: Wine, Restaurant: Utensils,
@@ -19,6 +19,7 @@ function ratingWord(r: number) {
 export function HotelDetailModal({ hotel, nights, onClose, onBook }: { hotel: Hotel | null; nights: number; onClose: () => void; onBook: (h: Hotel, roomName: string, pricePerNight: number) => void }) {
   const [active, setActive] = useState(0);
   const [room, setRoom] = useState(0);
+  const money = useMoney();
   if (!hotel) return null;
 
   const startIdx = HOTEL_IMAGES.indexOf(hotel.image);
@@ -83,7 +84,7 @@ export function HotelDetailModal({ hotel, nights, onClose, onBook }: { hotel: Ho
               <div className="mt-1 flex flex-wrap gap-1.5">{r.perks.map((p) => <span key={p} className="flex items-center gap-1 text-[11px] font-medium text-emerald-600"><Check size={11} /> {p}</span>)}</div>
             </div>
             <div className="shrink-0 text-right">
-              <p className="text-lg font-extrabold text-slate-900">{formatINR(r.price)}</p>
+              <p className="text-lg font-extrabold text-slate-900">{money(r.price)}</p>
               <p className="text-[10px] text-slate-400">/night</p>
             </div>
           </button>
@@ -99,7 +100,7 @@ export function HotelDetailModal({ hotel, nights, onClose, onBook }: { hotel: Ho
       {/* Book */}
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
         <div>
-          <p className="text-xl font-extrabold text-slate-900">{formatINR(rooms[room].price * nights)}</p>
+          <p className="text-xl font-extrabold text-slate-900">{money(rooms[room].price * nights)}</p>
           <p className="text-[11px] text-slate-400">{nights} night{nights > 1 ? "s" : ""} · {rooms[room].name} · + taxes</p>
         </div>
         <Button variant="accent" onClick={() => onBook(hotel, rooms[room].name, rooms[room].price)}>Book this hotel</Button>

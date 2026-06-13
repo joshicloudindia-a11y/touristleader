@@ -4,7 +4,8 @@ import { useSearchParams } from "next/navigation";
 import { Bus as BusIcon, SlidersHorizontal, X } from "lucide-react";
 import type { BusTrip } from "@/lib/bus-types";
 import { BUS_OPERATORS } from "@/lib/bus-constants";
-import { cn, formatINR, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+import { useMoney } from "@/store/preferences";
 import { BusCard } from "./BusCard";
 import { BusSeatMap } from "./BusSeatMap";
 import { ModifyBusSearch } from "./ModifyBusSearch";
@@ -30,12 +31,13 @@ function toggle<T>(a: T[], v: T) { return a.includes(v) ? a.filter((x) => x !== 
 
 function FilterPanel({ f, set, bounds }: { f: Filters; set: (x: Filters) => void; bounds: [number, number] }) {
   const [min, max] = bounds; const cur = f.maxPrice || max;
+  const money = useMoney();
   return (
     <div className="space-y-5 rounded-2xl bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between"><h3 className="font-bold text-slate-900">Filters</h3><button onClick={() => set(DEFAULT)} className="text-xs font-semibold text-brand hover:underline">Clear all</button></div>
       <div><p className="mb-2 text-sm font-semibold text-slate-700">AC</p><div className="flex gap-2">{[["all", "All"], ["ac", "AC"], ["nonac", "Non-AC"]].map(([v, l]) => <button key={v} onClick={() => set({ ...f, ac: v as Filters["ac"] })} className={cn("flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold", f.ac === v ? "border-brand bg-brand/10 text-brand" : "border-slate-200 text-slate-600")}>{l}</button>)}</div></div>
       <div><p className="mb-2 text-sm font-semibold text-slate-700">Type</p><div className="flex gap-2">{[["all", "All"], ["sleeper", "Sleeper"], ["seater", "Seater"]].map(([v, l]) => <button key={v} onClick={() => set({ ...f, type: v as Filters["type"] })} className={cn("flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold", f.type === v ? "border-brand bg-brand/10 text-brand" : "border-slate-200 text-slate-600")}>{l}</button>)}</div></div>
-      <div><div className="mb-2 flex justify-between"><p className="text-sm font-semibold text-slate-700">Max fare</p><span className="text-sm font-bold text-brand">{formatINR(cur)}</span></div><input type="range" min={min} max={max} value={cur} onChange={(e) => set({ ...f, maxPrice: Number(e.target.value) })} className="w-full accent-[var(--brand)]" /></div>
+      <div><div className="mb-2 flex justify-between"><p className="text-sm font-semibold text-slate-700">Max fare</p><span className="text-sm font-bold text-brand">{money(cur)}</span></div><input type="range" min={min} max={max} value={cur} onChange={(e) => set({ ...f, maxPrice: Number(e.target.value) })} className="w-full accent-[var(--brand)]" /></div>
       <div><p className="mb-2 text-sm font-semibold text-slate-700">Departure time</p><div className="grid grid-cols-2 gap-2">{TIME_SLOTS.map((s) => <button key={s.id} onClick={() => set({ ...f, slots: toggle(f.slots, s.id) })} className={cn("rounded-lg border px-2 py-1.5 text-xs font-medium", f.slots.includes(s.id) ? "border-brand bg-brand/10 text-brand" : "border-slate-200 text-slate-600")}>{s.label}</button>)}</div></div>
       <div><p className="mb-2 text-sm font-semibold text-slate-700">Operators</p><div className="max-h-44 space-y-1.5 overflow-y-auto">{BUS_OPERATORS.map((o) => <label key={o} className="flex cursor-pointer items-center gap-2 rounded-lg px-1 py-1 hover:bg-slate-50"><input type="checkbox" checked={f.operators.includes(o)} onChange={() => set({ ...f, operators: toggle(f.operators, o) })} className="accent-[var(--brand)]" /><span className="text-sm text-slate-700">{o}</span></label>)}</div></div>
     </div>

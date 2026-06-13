@@ -2,8 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Globe, Check, Info } from "lucide-react";
-import { CURRENCIES, LANGUAGES, languageByCode, strings } from "@/lib/preferences";
-import { usePreferences } from "@/store/preferences";
+import { CURRENCIES, LANGUAGES } from "@/lib/preferences";
+import { usePreferences, useT } from "@/store/preferences";
 import { cn } from "@/lib/utils";
 
 /** Currency + language selector. `variant` controls the trigger styling for the
@@ -14,7 +14,7 @@ export function CurrencyLanguageMenu({ variant = "light" }: { variant?: "light" 
   const [coords, setCoords] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const t = strings(language);
+  const t = useT();
 
   const toggle = () => {
     if (open) { setOpen(false); return; }
@@ -62,7 +62,7 @@ export function CurrencyLanguageMenu({ variant = "light" }: { variant?: "light" 
           className="fixed z-[200] w-[min(22rem,calc(100vw-1rem))] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl animate-fade-up"
         >
           {/* Currency */}
-          <p className="px-1 pb-1.5 text-xs font-bold uppercase tracking-wide text-slate-400">{t.currency}</p>
+          <p className="px-1 pb-1.5 text-xs font-bold uppercase tracking-wide text-slate-400">{t("cur_currency")}</p>
           <div className="grid grid-cols-2 gap-1.5">
             {CURRENCIES.map((c) => {
               const on = c.code === currency;
@@ -83,7 +83,7 @@ export function CurrencyLanguageMenu({ variant = "light" }: { variant?: "light" 
           </div>
 
           {/* Language */}
-          <p className="px-1 pb-1.5 pt-3 text-xs font-bold uppercase tracking-wide text-slate-400">{t.language}</p>
+          <p className="px-1 pb-1.5 pt-3 text-xs font-bold uppercase tracking-wide text-slate-400">{t("cur_language")}</p>
           <div className="grid grid-cols-2 gap-1.5">
             {LANGUAGES.map((l) => {
               const on = l.code === language;
@@ -104,7 +104,7 @@ export function CurrencyLanguageMenu({ variant = "light" }: { variant?: "light" 
           </div>
 
           <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-slate-50 px-2.5 py-2 text-[11px] leading-snug text-slate-500">
-            <Info size={13} className="mt-0.5 shrink-0" /> {t.payNote}
+            <Info size={13} className="mt-0.5 shrink-0" /> {t("cur_payNote")}
           </p>
         </div>,
         document.body

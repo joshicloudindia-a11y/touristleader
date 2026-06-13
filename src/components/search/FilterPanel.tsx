@@ -1,6 +1,7 @@
 "use client";
 import { AIRLINES } from "@/lib/constants";
-import { cn, formatINR } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { useMoney } from "@/store/preferences";
 import { AirlineLogo } from "@/components/AirlineLogo";
 
 export interface Filters {
@@ -25,6 +26,7 @@ function toggle<T>(arr: T[], v: T) {
 }
 
 export function FilterPanel({ filters, onChange, priceBounds }: { filters: Filters; onChange: (f: Filters) => void; priceBounds: [number, number] }) {
+  const money = useMoney();
   const [min, max] = priceBounds;
   const cur = filters.maxPrice || max;
   return (
@@ -61,7 +63,7 @@ export function FilterPanel({ filters, onChange, priceBounds }: { filters: Filte
       <div>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-700">Max price</p>
-          <span className="text-sm font-bold text-brand">{formatINR(cur)}</span>
+          <span className="text-sm font-bold text-brand">{money(cur)}</span>
         </div>
         <input type="range" min={min} max={max} value={cur} onChange={(e) => onChange({ ...filters, maxPrice: Number(e.target.value) })}
           className="w-full accent-[var(--brand)]" />

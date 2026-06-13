@@ -2,9 +2,10 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowLeftRight, Search, Sparkles, Plus, X, Check } from "lucide-react";
-import { TRIP_TYPES, AIRLINES, GROUP_BOOKING_PERKS } from "@/lib/constants";
+import { TRIP_TYPES, AIRLINES } from "@/lib/constants";
 import type { CabinClass, TravellerCount, TripType } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/store/preferences";
 import { InfoPopup } from "@/components/ui/InfoPopup";
 import { AirportSelect } from "./AirportSelect";
 import { TravellerSelect } from "./TravellerSelect";
@@ -33,6 +34,7 @@ function resolveAirline(input: string): string {
 
 export function SearchWidget() {
   const router = useRouter();
+  const tx = useT();
   const [tripType, setTripType] = useState<TripType>("ONE_WAY");
   const [passengerType, setPassengerType] = useState("REGULAR");
   const [from, setFrom] = useState("DEL");
@@ -102,6 +104,7 @@ export function SearchWidget() {
         <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
           {TRIP_TYPES.map((t) => {
             const badge = (t as { badge?: string }).badge;
+            const label = tx(`trip_${t.id}`);
             return (
               <div key={t.id} className="flex items-center">
                 <button
@@ -111,14 +114,14 @@ export function SearchWidget() {
                   <span className={cn("grid h-4 w-4 place-items-center rounded-full border-2", tripType === t.id ? "border-brand" : "border-slate-300")}>
                     {tripType === t.id && <span className="h-2 w-2 rounded-full bg-brand" />}
                   </span>
-                  {t.label}
-                  {badge && <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-600">{badge}</span>}
+                  {label}
+                  {badge && <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-600">{tx("badge_new")}</span>}
                 </button>
-                <InfoPopup title={t.label} className="-ml-1 mr-1"><p className="text-sm text-slate-700">{t.info}</p></InfoPopup>
+                <InfoPopup title={label} className="-ml-1 mr-1"><p className="text-sm text-slate-700">{t.info}</p></InfoPopup>
               </div>
             );
           })}
-          <span className="ml-auto hidden text-sm font-medium text-slate-500 sm:block">Book International and Domestic Flights</span>
+          <span className="ml-auto hidden text-sm font-medium text-slate-500 sm:block">{tx("book_intl_domestic")}</span>
         </div>
 
         {/* ===== Multi-city: stacked legs ===== */}
@@ -127,18 +130,18 @@ export function SearchWidget() {
             {legs.map((leg, i) => (
               <div key={i} className="grid grid-cols-1 divide-y divide-slate-200 rounded-xl border border-slate-200 sm:grid-cols-2 sm:divide-y-0 md:grid-cols-12 md:divide-x">
                 <div className="relative grid grid-cols-2 md:col-span-5">
-                  <div className="min-w-0 border-r border-slate-200 pr-5"><AirportSelect label="From City" value={leg.from} onChange={(v) => updateLeg(i, { from: v })} /></div>
-                  <div className="min-w-0 pl-5"><AirportSelect label="To City" value={leg.to} onChange={(v) => updateLeg(i, { to: v })} align="right" /></div>
+                  <div className="min-w-0 border-r border-slate-200 pr-5"><AirportSelect label={tx("f_fromCity")} value={leg.from} onChange={(v) => updateLeg(i, { from: v })} /></div>
+                  <div className="min-w-0 pl-5"><AirportSelect label={tx("f_toCity")} value={leg.to} onChange={(v) => updateLeg(i, { to: v })} align="right" /></div>
                   <button onClick={() => swapLeg(i)} className="absolute left-1/2 top-1/2 z-20 grid h-9 w-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-brand shadow-md transition-transform hover:rotate-180" aria-label="Swap"><ArrowLeftRight size={16} /></button>
                 </div>
-                <div className="md:col-span-3"><DateField label="Depart" value={leg.date} min={tomorrow(0)} onChange={(v) => updateLeg(i, { date: v })} showFares from={leg.from} to={leg.to} /></div>
+                <div className="md:col-span-3"><DateField label={tx("f_depart")} value={leg.date} min={tomorrow(0)} onChange={(v) => updateLeg(i, { date: v })} showFares from={leg.from} to={leg.to} /></div>
                 <div className="flex items-center justify-center px-3 py-3 md:col-span-4">
                   {i === 0 ? (
                     <div className="w-full"><TravellerSelect travellers={travellers} cabinClass={cabinClass} onChange={(t, c) => { setTravellers(t); setCabinClass(c); }} /></div>
                   ) : i === legs.length - 1 ? (
                     <div className="flex w-full items-center justify-between gap-2">
                       <button onClick={addLeg} disabled={legs.length >= 5} className="flex items-center gap-1.5 rounded-lg border border-brand px-4 py-2.5 text-sm font-bold text-brand transition-colors hover:bg-brand/5 disabled:opacity-40">
-                        <Plus size={16} /> ADD ANOTHER CITY
+                        <Plus size={16} /> {tx("btn_addCity")}
                       </button>
                       {legs.length > 2 && (
                         <button onClick={() => removeLeg(i)} className="grid h-8 w-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-rose-500" aria-label="Remove leg"><X size={18} /></button>
@@ -155,21 +158,21 @@ export function SearchWidget() {
           /* ===== One-way / Round-trip / Group field box ===== */
           <div className="mt-3 grid grid-cols-1 divide-y divide-slate-200 rounded-xl border border-slate-200 sm:grid-cols-2 sm:divide-y-0 md:grid-cols-12 md:divide-x">
             <div className="relative grid grid-cols-2 border-b border-slate-200 sm:border-b-0 md:col-span-5">
-              <div className="min-w-0 border-r border-slate-200 pr-5"><AirportSelect label="From City" value={from} onChange={setFrom} /></div>
-              <div className="min-w-0 pl-5"><AirportSelect label="To City" value={to} onChange={setTo} align="right" /></div>
+              <div className="min-w-0 border-r border-slate-200 pr-5"><AirportSelect label={tx("f_fromCity")} value={from} onChange={setFrom} /></div>
+              <div className="min-w-0 pl-5"><AirportSelect label={tx("f_toCity")} value={to} onChange={setTo} align="right" /></div>
               <button onClick={swap} className="absolute left-1/2 top-1/2 z-20 grid h-9 w-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-brand shadow-md transition-transform hover:rotate-180" aria-label="Swap airports">
                 <ArrowLeftRight size={16} />
               </button>
             </div>
             <div className="border-b border-slate-200 sm:border-r sm:border-b-0 md:col-span-2 md:border-b-0">
-              <DateField label="Departure" value={departDate} min={tomorrow(0)} onChange={setDepartDate} mode="depart" rangeOther={returnDate} showFares from={from} to={to} align="left" />
+              <DateField label={tx("f_departure")} value={departDate} min={tomorrow(0)} onChange={setDepartDate} mode="depart" rangeOther={returnDate} showFares from={from} to={to} align="left" />
             </div>
             <div className="border-b border-slate-200 sm:border-b-0 md:col-span-2">
               <DateField
-                label="Return"
+                label={tx("f_return")}
                 value={returnDate}
                 min={departDate}
-                placeholder="Tap to add a return date for bigger discounts"
+                placeholder={tx("f_returnHint")}
                 mode="return"
                 rangeOther={departDate}
                 showFares
@@ -190,17 +193,17 @@ export function SearchWidget() {
         <div className="mt-4">
           <div className="flex items-center gap-2">
             <span className="grid h-7 w-7 place-items-center rounded-full bg-brand/10 text-brand"><Sparkles size={15} /></span>
-            <h3 className="text-sm font-bold text-slate-800">Advanced Search</h3>
+            <h3 className="text-sm font-bold text-slate-800">{tx("adv_title")}</h3>
             <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold lowercase text-violet-600">new</span>
           </div>
-          <p className="mt-0.5 pl-9 text-xs text-slate-500">Use Advanced Search to find all the flights using airline name or airline code</p>
+          <p className="mt-0.5 pl-9 text-xs text-slate-500">{tx("adv_desc")}</p>
           <div className="mt-2 pl-9">
-            <label className="mb-1 block text-xs font-bold text-slate-600">Airline name or code <span className="font-medium text-slate-400">(Optional)</span></label>
+            <label className="mb-1 block text-xs font-bold text-slate-600">{tx("adv_airlineLabel")} <span className="font-medium text-slate-400">{tx("adv_optional")}</span></label>
             <input
               list="airline-list"
               value={airline}
               onChange={(e) => setAirline(e.target.value)}
-              placeholder="Enter airline (eg. IndiGo or 6E)"
+              placeholder={tx("adv_placeholder")}
               className="w-full max-w-md rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
             />
             <datalist id="airline-list">
@@ -212,9 +215,9 @@ export function SearchWidget() {
         {/* ===== Group Booking perks  OR  Fare type + Non-Stop ===== */}
         {group ? (
           <div className="mt-4">
-            <p className="text-sm font-bold text-slate-800">Unlock Exclusive Perks with Group Bookings!</p>
+            <p className="text-sm font-bold text-slate-800">{tx("grp_title")}</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {GROUP_BOOKING_PERKS.map((p) => (
+              {[tx("grp_perk1"), tx("grp_perk2"), tx("grp_perk3")].map((p) => (
                 <span key={p} className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
                   <Check size={14} className="text-amber-600" /> {p}
                 </span>
@@ -225,7 +228,7 @@ export function SearchWidget() {
           <>
             <SpecialFares value={passengerType} onChange={setPassengerType} />
             <div className="mt-3 flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Popular Filter</span>
+              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{tx("filter_popular")}</span>
               <button
                 onClick={() => setNonStop((v) => !v)}
                 className={cn("flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors", nonStop ? "border-brand bg-brand/5 text-brand" : "border-slate-200 text-slate-600 hover:border-slate-300")}
@@ -233,7 +236,7 @@ export function SearchWidget() {
                 <span className={cn("grid h-4 w-4 place-items-center rounded-full border-2", nonStop ? "border-brand" : "border-slate-300")}>
                   {nonStop && <span className="h-2 w-2 rounded-full bg-brand" />}
                 </span>
-                Non-Stop
+                {tx("filter_nonStop")}
               </button>
             </div>
           </>
@@ -242,7 +245,7 @@ export function SearchWidget() {
 
       {/* Search button straddling bottom edge */}
       <button onClick={search} className="absolute -bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-gradient-to-r from-brand to-sky-500 px-14 py-4 text-lg font-bold tracking-wide text-white shadow-xl shadow-brand/30 transition-transform hover:scale-[1.03] active:scale-95">
-        <Search size={18} /> SEARCH
+        <Search size={18} /> {tx("btn_search")}
       </button>
     </div>
   );

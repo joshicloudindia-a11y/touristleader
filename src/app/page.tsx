@@ -7,7 +7,8 @@ import { Footer } from "@/components/Footer";
 import { SearchWidget } from "@/components/home/SearchWidget";
 import { OffersCarousel } from "@/components/home/OffersCarousel";
 import { WishlistButton } from "@/components/WishlistButton";
-import { BRAND, AIRLINES } from "@/lib/constants";
+import { T } from "@/components/T";
+import { AIRLINES } from "@/lib/constants";
 
 const FEATURES = [
   { icon: Leaf, title: "Caring & Sustainable", text: "Carbon-aware itineraries and inclusive fares for every traveller." },
@@ -66,8 +67,8 @@ export default function HomePage() {
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-900/70 via-slate-900/45 to-slate-900/25" />
           <HomeHeader />
           <div className="relative mx-auto max-w-7xl px-4 text-center text-white">
-            <h1 className="text-3xl font-extrabold tracking-tight drop-shadow-lg sm:text-5xl">Fly with comfort, every step of the way</h1>
-            <p className="mx-auto mt-3 max-w-2xl text-sm text-white/95 drop-shadow sm:text-lg">{BRAND.tagline}.</p>
+            <h1 className="text-3xl font-extrabold tracking-tight drop-shadow-lg sm:text-5xl"><T k="hero_flights_title" /></h1>
+            <p className="mx-auto mt-3 max-w-2xl text-sm text-white/95 drop-shadow sm:text-lg"><T k="hero_flights_sub" /></p>
           </div>
         </section>
 
@@ -98,8 +99,8 @@ export default function HomePage() {
 
         {/* Popular destinations */}
         <section className="mx-auto mt-14 max-w-7xl px-4">
-          <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Popular destinations</h2>
-          <p className="mt-1 text-sm text-slate-500">Handpicked fares to get you packing.</p>
+          <h2 className="text-xl font-bold text-slate-900 sm:text-2xl"><T k="sec_popDest" /></h2>
+          <p className="mt-1 text-sm text-slate-500"><T k="sec_popDestSub" /></p>
           <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {DESTS.map((d) => (
               <Link
@@ -125,8 +126,8 @@ export default function HomePage() {
 
         {/* Popular flight routes */}
         <section className="mx-auto mt-14 max-w-7xl px-4">
-          <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Popular flight routes</h2>
-          <p className="mt-1 text-sm text-slate-500">Most-searched routes — tap to see live fares.</p>
+          <h2 className="text-xl font-bold text-slate-900 sm:text-2xl"><T k="sec_popRoutes" /></h2>
+          <p className="mt-1 text-sm text-slate-500"><T k="sec_popRoutesSub" /></p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {ROUTES.map((r) => (
               <Link
@@ -153,8 +154,8 @@ export default function HomePage() {
 
         {/* Top airlines (wired to Advanced Search ?airline=) */}
         <section className="mx-auto mt-14 max-w-7xl px-4">
-          <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Top airlines</h2>
-          <p className="mt-1 text-sm text-slate-500">Tap an airline to see its flights on the New Delhi → Mumbai route.</p>
+          <h2 className="text-xl font-bold text-slate-900 sm:text-2xl"><T k="sec_topAir" /></h2>
+          <p className="mt-1 text-sm text-slate-500"><T k="sec_topAirSub" /></p>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {AIRLINES.map((a) => (
               <Link
@@ -176,7 +177,7 @@ export default function HomePage() {
 
         {/* Book in 3 easy steps */}
         <section className="mx-auto mt-14 max-w-7xl px-4">
-          <h2 className="text-center text-xl font-bold text-slate-900 sm:text-2xl">Book a flight in 3 easy steps</h2>
+          <h2 className="text-center text-xl font-bold text-slate-900 sm:text-2xl"><T k="sec_book3" /></h2>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {STEPS.map((s, i) => (
               <div key={s.title} className="relative rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -211,7 +212,7 @@ export default function HomePage() {
 
         {/* FAQ */}
         <section className="mx-auto mb-16 mt-14 max-w-3xl px-4">
-          <h2 className="text-center text-xl font-bold text-slate-900 sm:text-2xl">Frequently asked questions</h2>
+          <h2 className="text-center text-xl font-bold text-slate-900 sm:text-2xl"><T k="sec_faq" /></h2>
           <div className="mt-6 space-y-3">
             {FAQS.map((f) => (
               <details key={f.q} className="group rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">

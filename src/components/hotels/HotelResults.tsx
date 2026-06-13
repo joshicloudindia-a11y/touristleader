@@ -4,7 +4,8 @@ import { useSearchParams } from "next/navigation";
 import { BedDouble, SlidersHorizontal, X, Star } from "lucide-react";
 import type { Hotel, HotelSearchQuery } from "@/lib/hotel-types";
 import { HOTEL_AMENITIES } from "@/lib/hotel-constants";
-import { cn, formatINR, formatDayMonth } from "@/lib/utils";
+import { cn, formatDayMonth } from "@/lib/utils";
+import { useMoney } from "@/store/preferences";
 import { HotelCard } from "./HotelCard";
 import { ModifyHotelSearch } from "./ModifyHotelSearch";
 import { HotelDetailModal } from "./HotelDetailModal";
@@ -28,11 +29,12 @@ function toggle<T>(a: T[], v: T) { return a.includes(v) ? a.filter((x) => x !== 
 function FilterPanel({ filters, set, bounds }: { filters: Filters; set: (f: Filters) => void; bounds: [number, number] }) {
   const [min, max] = bounds;
   const cur = filters.maxPrice || max;
+  const money = useMoney();
   return (
     <div className="space-y-5 rounded-2xl bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between"><h3 className="font-bold text-slate-900">Filters</h3><button onClick={() => set(DEFAULT)} className="text-xs font-semibold text-brand hover:underline">Clear all</button></div>
       <div>
-        <div className="mb-2 flex justify-between"><p className="text-sm font-semibold text-slate-700">Max price / night</p><span className="text-sm font-bold text-brand">{formatINR(cur)}</span></div>
+        <div className="mb-2 flex justify-between"><p className="text-sm font-semibold text-slate-700">Max price / night</p><span className="text-sm font-bold text-brand">{money(cur)}</span></div>
         <input type="range" min={min} max={max} value={cur} onChange={(e) => set({ ...filters, maxPrice: Number(e.target.value) })} className="w-full accent-[var(--brand)]" />
       </div>
       <div>

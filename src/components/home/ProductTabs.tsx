@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Plane, BedDouble, Palmtree, Bus, Stamp, CreditCard, ShieldCheck, ChevronDown, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/store/preferences";
 
 const TABS = [
   { id: "flights", label: "Flights", icon: Plane, href: "/" },
@@ -18,6 +19,7 @@ const TABS = [
 type Tab = (typeof TABS)[number];
 
 function Tab({ tab, active }: { tab: Tab; active: boolean }) {
+  const t = useT();
   return (
     <Link
       href={tab.href}
@@ -27,7 +29,7 @@ function Tab({ tab, active }: { tab: Tab; active: boolean }) {
       )}
     >
       <tab.icon size={24} className={cn(active ? "text-brand" : "text-slate-500")} strokeWidth={1.6} />
-      <span className="text-[11px] font-semibold leading-tight">{tab.label}</span>
+      <span className="text-[11px] font-semibold leading-tight">{t(`tab_${tab.id}`)}</span>
       {active && <span className="absolute -bottom-1 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-brand" />}
     </Link>
   );
@@ -39,6 +41,7 @@ function Tab({ tab, active }: { tab: Tab; active: boolean }) {
  * - collapseAfter=N: show first N tabs inline and tuck the rest into a "More" dropdown.
  */
 export function ProductTabs({ active = "flights", collapseAfter }: { active?: string; collapseAfter?: number }) {
+  const tx = useT();
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -105,7 +108,7 @@ export function ProductTabs({ active = "flights", collapseAfter }: { active?: st
         >
           <LayoutGrid size={24} className={cn(moreActive ? "text-brand" : "text-slate-500")} strokeWidth={1.6} />
           <span className="flex items-center gap-0.5 text-[11px] font-semibold leading-tight">
-            More <ChevronDown size={12} className={cn("transition-transform", open && "rotate-180")} />
+            {tx("tab_more")} <ChevronDown size={12} className={cn("transition-transform", open && "rotate-180")} />
           </span>
           {moreActive && <span className="absolute -bottom-1 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-brand" />}
         </button>
@@ -124,7 +127,7 @@ export function ProductTabs({ active = "flights", collapseAfter }: { active?: st
               )}
             >
               <t.icon size={20} strokeWidth={1.6} className={active === t.id ? "text-brand" : "text-slate-500"} />
-              {t.label}
+              {tx(`tab_${t.id}`)}
             </Link>
           ))}
         </div>,

@@ -4,6 +4,7 @@ import { Info } from "lucide-react";
 import { PASSENGER_TYPES, type PassengerType } from "@/lib/constants";
 import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
+import { useT } from "@/store/preferences";
 
 const SUBTITLES: Record<string, string> = {
   REGULAR: "Regular fares",
@@ -36,9 +37,10 @@ function Section({ title, items }: { title: string; items?: string[] }) {
 
 export function SpecialFares({ value, onChange }: { value: string; onChange: (id: string) => void }) {
   const [info, setInfo] = useState<PassengerType | null>(null);
+  const t = useT();
   return (
     <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-start">
-      <span className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:w-16 sm:pt-2 sm:leading-tight">Special Fares</span>
+      <span className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:w-16 sm:pt-2 sm:leading-tight">{t("fare_special")}</span>
       <div className="no-scrollbar flex flex-1 gap-2 overflow-x-auto pb-1">
         {PASSENGER_TYPES.map((p) => {
           const on = value === p.id;

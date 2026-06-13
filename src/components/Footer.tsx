@@ -2,12 +2,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { Globe, AtSign, MessageCircle, Rss } from "lucide-react";
 import { BRAND } from "@/lib/constants";
+import { T } from "@/components/T";
 
 const COLS = [
-  { title: "Company", links: ["About Us", "Careers", "Press", "Sustainability", "Contact"] },
-  { title: "Products", links: ["Flights", "Hotels", "Holiday Packages", "Bus", "Visa", "Forex"] },
-  { title: "Support", links: ["Help Centre", "Cancellation", "Refund Policy", "Baggage Rules", "Travel Insurance"] },
-  { title: "Discover", links: ["Cheap Flights", "Offers", "Gift Cards", "Mobile App", "Blog"] },
+  { key: "foot_company", links: ["About Us", "Careers", "Press", "Sustainability", "Contact"] },
+  { key: "foot_products", links: ["Flights", "Hotels", "Holiday Packages", "Bus", "Visa", "Forex"] },
+  { key: "foot_support", links: ["Help Centre", "Cancellation", "Refund Policy", "Baggage Rules", "Travel Insurance"] },
+  { key: "foot_discover", links: ["Cheap Flights", "Offers", "Gift Cards", "Mobile App", "Blog"] },
 ];
 
 export function Footer() {
@@ -35,8 +36,8 @@ export function Footer() {
             </div>
           </div>
           {COLS.map((col) => (
-            <div key={col.title}>
-              <h4 className="mb-3 text-sm font-semibold text-white">{col.title}</h4>
+            <div key={col.key}>
+              <h4 className="mb-3 text-sm font-semibold text-white"><T k={col.key} /></h4>
               <ul className="space-y-2 text-sm">
                 {col.links.map((l) => (
                   <li key={l}>
