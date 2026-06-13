@@ -1,4 +1,4 @@
-export type TripType = "ONE_WAY" | "ROUND_TRIP" | "MULTI_CITY";
+export type TripType = "ONE_WAY" | "ROUND_TRIP" | "MULTI_CITY" | "GROUP_BOOKING";
 export type CabinClass = "Economy" | "Premium" | "Business";
 export type FareTypeId = "REGULAR" | "FEE_SAVER" | "COMFORT" | "YOUR_CHOICE";
 

@@ -60,7 +60,12 @@ export function SearchResults() {
       .then((r) => r.json())
       .then((d: ApiResponse) => {
         setData(d);
-        setFilters(DEFAULT_FILTERS);
+        // Seed filters from the search query: Advanced Search airline + Non-Stop popular filter.
+        const seeded: Filters = { ...DEFAULT_FILTERS };
+        const airline = sp.get("airline");
+        if (airline) seeded.airlines = [airline.toUpperCase()];
+        if (sp.get("nonstop") === "1") seeded.stops = [0];
+        setFilters(seeded);
       })
       .finally(() => setLoading(false));
   }, [qs]);
