@@ -6,6 +6,7 @@ import { Plane, BedDouble, Palmtree, Bus, Stamp, Gift, HelpCircle, Menu, X } fro
 import { BRAND, NAV_TABS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { AuthButton } from "@/components/auth/AuthButton";
+import { CurrencyLanguageMenu } from "@/components/CurrencyLanguageMenu";
 
 const ICONS: Record<string, React.ElementType> = { Plane, BedDouble, Palmtree, Bus, Stamp };
 
@@ -53,6 +54,7 @@ export function Header({ active = "flights" }: { active?: string }) {
           <Link href="/help" className="hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
             <HelpCircle size={16} /> Help
           </Link>
+          <span className="hidden sm:block"><CurrencyLanguageMenu variant="dark" /></span>
           <AuthButton variant="outline" compact />
           <button className="lg:hidden grid h-9 w-9 place-items-center rounded-lg text-slate-700 hover:bg-slate-100" onClick={() => setMobileOpen((o) => !o)} aria-label="Menu">
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}

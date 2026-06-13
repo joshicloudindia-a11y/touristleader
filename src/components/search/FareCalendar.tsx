@@ -1,7 +1,8 @@
 "use client";
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn, formatINR } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { useMoney } from "@/store/preferences";
 
 interface Day {
   date: string;
@@ -11,6 +12,7 @@ interface Day {
 
 export function FareCalendar({ days, selected, onSelect }: { days: Day[]; selected: string; onSelect: (d: string) => void }) {
   const scroller = useRef<HTMLDivElement>(null);
+  const money = useMoney();
   const scroll = (dir: number) => scroller.current?.scrollBy({ left: dir * 240, behavior: "smooth" });
 
   return (
@@ -35,7 +37,7 @@ export function FareCalendar({ days, selected, onSelect }: { days: Day[]; select
                 {dt.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })}
               </span>
               <span className={cn("mt-0.5 text-sm font-bold", active ? "text-white" : d.cheapest ? "text-emerald-600" : "text-slate-800")}>
-                {formatINR(d.price)}
+                {money(d.price)}
               </span>
               {d.cheapest && !active && <span className="text-[9px] font-bold uppercase text-emerald-600">Cheapest</span>}
             </button>

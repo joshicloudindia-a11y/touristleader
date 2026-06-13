@@ -4,9 +4,11 @@ import Link from "next/link";
 import { Star, MapPin, Moon, Sun } from "lucide-react";
 import type { Package } from "@/lib/packages";
 import { formatINR } from "@/lib/utils";
+import { useMoney } from "@/store/preferences";
 import { WishlistButton } from "@/components/WishlistButton";
 
 export function PackageCard({ pkg }: { pkg: Package }) {
+  const money = useMoney();
   return (
     <div className="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 transition-shadow hover:shadow-md">
       <Link href={`/holidays/${pkg.slug}`} className="relative block h-44 overflow-hidden">
@@ -27,7 +29,7 @@ export function PackageCard({ pkg }: { pkg: Package }) {
           <div>
             <span className="flex items-center gap-1 text-xs text-amber-500"><Star size={12} className="fill-amber-400" /> {pkg.rating} <span className="text-slate-400">({pkg.reviews})</span></span>
             <p className="mt-1 text-[11px] text-slate-400">from</p>
-            <p className="text-xl font-extrabold text-slate-900">{formatINR(pkg.priceINR)} <span className="text-xs font-normal text-slate-400">/person</span></p>
+            <p className="text-xl font-extrabold text-slate-900">{money(pkg.priceINR)} <span className="text-xs font-normal text-slate-400">/person</span></p>
           </div>
           <Link href={`/holidays/${pkg.slug}`} className="rounded-xl bg-gradient-to-r from-accent to-orange-500 px-4 py-2 text-sm font-bold text-white shadow-sm hover:opacity-95">View Details</Link>
         </div>

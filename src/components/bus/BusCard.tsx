@@ -1,13 +1,15 @@
 "use client";
 import { Star, Armchair, Clock, Zap, Wifi, ChevronDown, Bus } from "lucide-react";
 import type { BusTrip } from "@/lib/bus-types";
-import { formatINR, formatTime, formatDuration } from "@/lib/utils";
+import { formatTime, formatDuration } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useMoney } from "@/store/preferences";
 
 const AM_ICONS: Record<string, React.ElementType> = { "Charging Point": Zap, WiFi: Wifi };
 
 export function BusCard({ bus, onSelect, open }: { bus: BusTrip; onSelect: () => void; open?: boolean }) {
   const off = bus.originalFare > bus.fare ? Math.round((1 - bus.fare / bus.originalFare) * 100) : 0;
+  const money = useMoney();
   return (
     <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 transition-shadow hover:shadow-md">
       <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
@@ -30,8 +32,8 @@ export function BusCard({ bus, onSelect, open }: { bus: BusTrip; onSelect: () =>
 
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:w-44 sm:flex-col sm:items-end sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
           <div className="sm:text-right">
-            {off > 0 && <p className="text-xs text-slate-400 line-through">{formatINR(bus.originalFare)}</p>}
-            <p className="text-xl font-extrabold text-slate-900">{formatINR(bus.fare)}</p>
+            {off > 0 && <p className="text-xs text-slate-400 line-through">{money(bus.originalFare)}</p>}
+            <p className="text-xl font-extrabold text-slate-900">{money(bus.fare)}</p>
             <p className="text-[11px] text-emerald-600">{bus.seatsAvailable} seats · {bus.windowSeats} window</p>
           </div>
           <button onClick={onSelect} className={cn("flex items-center gap-1 rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm", open ? "bg-slate-600" : "bg-gradient-to-r from-accent to-orange-500 hover:opacity-95")}>

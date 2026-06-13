@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import { Briefcase, ChevronDown, Check, Luggage, Armchair, Utensils, RefreshCw, Plane } from "lucide-react";
 import type { Flight, FareOption } from "@/lib/types";
 import { FARE_TYPES } from "@/lib/constants";
-import { cn, formatINR, formatTime, formatDuration } from "@/lib/utils";
+import { cn, formatTime, formatDuration } from "@/lib/utils";
 import { AirlineLogo } from "@/components/AirlineLogo";
 import { Button } from "@/components/ui/Button";
+import { useMoney } from "@/store/preferences";
 import { useBooking } from "@/store/booking";
 import { useAuth } from "@/store/auth";
 import type { SearchQuery } from "@/lib/types";
@@ -36,6 +37,7 @@ function FareRow({ icon: Icon, text }: { icon: React.ElementType; text: string }
 export function FlightCard({ flight, query }: { flight: Flight; query: SearchQuery }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const money = useMoney();
   const selectFlight = useBooking((s) => s.selectFlight);
   const setQuery = useBooking((s) => s.setQuery);
   const requireAuth = useAuth((s) => s.requireAuth);
@@ -89,7 +91,7 @@ export function FlightCard({ flight, query }: { flight: Flight; query: SearchQue
         {/* Price + CTA */}
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:w-48 sm:flex-col sm:items-end sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
           <div className="sm:text-right">
-            <p className="text-xl font-extrabold text-slate-900">{formatINR(flight.basePrice)}</p>
+            <p className="text-xl font-extrabold text-slate-900">{money(flight.basePrice)}</p>
             <p className="text-[11px] text-slate-400">{flight.refundable ? "Refundable" : "Non-refundable"}</p>
           </div>
           <Button variant={open ? "soft" : "primary"} size="sm" onClick={() => setOpen((o) => !o)}>
@@ -117,7 +119,7 @@ export function FlightCard({ flight, query }: { flight: Flight; query: SearchQue
                     <span className={cn("absolute -top-2.5 left-3 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase text-white", BADGE[fare.id])}>{fare.badge}</span>
                   )}
                   <p className="text-sm font-extrabold text-slate-900">{fare.label}</p>
-                  <p className="mt-0.5 text-lg font-extrabold text-slate-900">{formatINR(fare.price)}</p>
+                  <p className="mt-0.5 text-lg font-extrabold text-slate-900">{money(fare.price)}</p>
                   <ul className="mt-2.5 flex-1 space-y-1.5">
                     <FareRow icon={Briefcase} text={`Cabin ${fare.cabinBaggage}`} />
                     <FareRow icon={Luggage} text={`Check-in ${fare.checkInBaggage}`} />

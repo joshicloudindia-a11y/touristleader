@@ -3,18 +3,23 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Store, Briefcase, Luggage, Heart, Globe, Menu, X } from "lucide-react";
+import { Store, Briefcase, Luggage, Heart, Menu, X } from "lucide-react";
 import { AuthButton } from "@/components/auth/AuthButton";
-
-const UTILITY = [
-  { icon: Store, title: "List Your Property", sub: "Grow your business!", href: "/list-property" },
-  { icon: Briefcase, title: "TL Biz", sub: "Business Travel", href: "/tl-biz" },
-  { icon: Luggage, title: "My Trips", sub: "Manage bookings", href: "/account/trips" },
-  { icon: Heart, title: "Wishlist", sub: "Saved favourites", href: "/account/wishlist" },
-];
+import { CurrencyLanguageMenu } from "@/components/CurrencyLanguageMenu";
+import { usePreferences, useSyncHtmlLang } from "@/store/preferences";
+import { strings } from "@/lib/preferences";
 
 export function HomeHeader() {
   const [open, setOpen] = useState(false);
+  const language = usePreferences((s) => s.language);
+  useSyncHtmlLang();
+  const t = strings(language);
+  const UTILITY = [
+    { icon: Store, title: t.listProperty, sub: t.listPropertySub, href: "/list-property" },
+    { icon: Briefcase, title: t.tlBiz, sub: t.tlBizSub, href: "/tl-biz" },
+    { icon: Luggage, title: t.myTrips, sub: t.myTripsSub, href: "/account/trips" },
+    { icon: Heart, title: t.wishlist, sub: t.wishlistSub, href: "/account/wishlist" },
+  ];
   // lock scroll while the mobile menu overlay is open
   useEffect(() => {
     if (!open) return;
@@ -50,9 +55,7 @@ export function HomeHeader() {
         {/* Right: login + currency */}
         <div className="flex items-center gap-2">
           <AuthButton variant="pill" compact />
-          <button className="hidden items-center gap-1.5 rounded-lg border border-white/40 px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 sm:flex">
-            <Globe size={15} /> INR | EN
-          </button>
+          <span className="hidden sm:block"><CurrencyLanguageMenu variant="light" /></span>
           <button className="grid h-10 w-10 place-items-center rounded-lg text-white hover:bg-white/10 xl:hidden" onClick={() => setOpen((o) => !o)} aria-label="Menu">
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
@@ -75,7 +78,7 @@ export function HomeHeader() {
               </Link>
             ))}
             <div className="my-1 border-t border-slate-100" />
-            <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-slate-50"><Globe size={20} className="text-brand" /> <span className="text-sm font-semibold text-slate-800">INR | English</span></button>
+            <div className="px-1 py-1"><CurrencyLanguageMenu variant="dark" /></div>
           </div>
         </div>,
         document.body

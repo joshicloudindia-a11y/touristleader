@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Star, MapPin, Wifi, Utensils, Waves, Check } from "lucide-react";
 import type { Hotel } from "@/lib/hotel-types";
 import { formatINR } from "@/lib/utils";
+import { useMoney } from "@/store/preferences";
 import { Button } from "@/components/ui/Button";
 import { WishlistButton } from "@/components/WishlistButton";
 
@@ -17,6 +18,7 @@ function ratingWord(r: number) {
 
 export function HotelCard({ hotel, nights, onView }: { hotel: Hotel; nights: number; onView: () => void }) {
   const off = Math.round((1 - hotel.pricePerNight / hotel.originalPrice) * 100);
+  const money = useMoney();
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 transition-shadow hover:shadow-md sm:flex-row">
       <div className="relative h-44 w-full shrink-0 sm:h-auto sm:w-60">
@@ -60,9 +62,9 @@ export function HotelCard({ hotel, nights, onView }: { hotel: Hotel; nights: num
 
         <div className="mt-auto flex items-end justify-between pt-3">
           <div>
-            <p className="text-xs text-slate-400 line-through">{formatINR(hotel.originalPrice)}</p>
-            <p className="text-xl font-extrabold text-slate-900">{formatINR(hotel.pricePerNight)} <span className="text-xs font-normal text-slate-400">/night</span></p>
-            <p className="text-[11px] text-slate-400">+ {formatINR(hotel.taxes)} taxes · <span className="font-semibold text-emerald-600">{off}% off</span></p>
+            <p className="text-xs text-slate-400 line-through">{money(hotel.originalPrice)}</p>
+            <p className="text-xl font-extrabold text-slate-900">{money(hotel.pricePerNight)} <span className="text-xs font-normal text-slate-400">/night</span></p>
+            <p className="text-[11px] text-slate-400">+ {money(hotel.taxes)} taxes · <span className="font-semibold text-emerald-600">{off}% off</span></p>
           </div>
           <Button size="sm" variant="accent" onClick={onView}>View Details</Button>
         </div>
