@@ -266,6 +266,36 @@ export async function sendVisaEnquiryEmails(e: {
   return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
 }
 
+export async function sendPartnerEnquiryEmails(e: {
+  enquiryNo: string; type: string; name: string; email: string; phone: string;
+  company?: string; city?: string; detailLines?: string[]; message?: string;
+}) {
+  const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
+  const typeLabel = e.type === "TL_BIZ" ? "TL Biz · Business Travel" : "List Your Property";
+  const detailRows = (e.detailLines || []).map((l) => `<tr><td colspan="2" style="padding:2px 0;color:#334155">${l}</td></tr>`).join("");
+  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">
+    <h2 style="color:#0b63d6">New ${typeLabel} Enquiry · ${e.enquiryNo}</h2>
+    <table style="font-size:14px">
+      ${e.company ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">${e.type === "TL_BIZ" ? "Company" : "Property"}</td><td><b>${e.company}</b></td></tr>` : ""}
+      ${e.city ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">City</td><td>${e.city}</td></tr>` : ""}
+      ${detailRows}
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Contact</td><td>${e.name} · ${e.email} · ${e.phone}</td></tr>
+    </table>
+    ${e.message ? `<p style="margin-top:12px;background:#f8fafc;padding:12px;border-radius:8px">${e.message}</p>` : ""}</div>`;
+
+  const inner = `
+    ${refBar("Enquiry No.", e.enquiryNo, "Type", typeLabel.length > 22 ? typeLabel.slice(0, 22) + "…" : typeLabel)}
+    <p style="margin:0 0 10px;color:#475569;font-size:14px">Hi ${e.name}, thanks for your interest in ${e.type === "TL_BIZ" ? "Tourist Leader for Business" : "listing with Tourist Leader"}. Our partnerships team will reach out shortly.</p>
+    ${sectionTitle("What's next")}
+    <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">Our team will contact you to complete onboarding and answer any questions. You can also call us at +91 9987-495-897.</p>`;
+
+  const r = await Promise.all([
+    deliver({ to: inbox, replyTo: e.email, subject: `${typeLabel} Enquiry ${e.enquiryNo}`, html: team, transactional: true }),
+    deliver({ to: e.email, subject: `We've got your enquiry — ${typeLabel} (${e.enquiryNo})`, html: emailShell({ title: "Enquiry Received", sub: typeLabel }, inner), transactional: true }),
+  ]);
+  return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
+}
+
 export async function sendForexEnquiryEmails(e: {
   enquiryNo: string; type: string; name: string; email: string; phone: string;
   address?: string; pan?: string; currencies?: string[]; amount?: string; message?: string;

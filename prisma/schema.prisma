@@ -237,6 +237,29 @@ model Package {
   @@index([slug])
 }
 
+model PartnerEnquiry {
+  id        String   @id @default(cuid())
+  enquiryNo String   @unique
+  userId    String?
+  type      String // LIST_PROPERTY | TL_BIZ
+  name      String // owner / contact person
+  email     String
+  phone     String
+  company   String? // property name / company name
+  city      String?
+  details   Json? // type-specific (propertyType, rooms, companySize, designation)
+  message   String?  @db.Text
+  status    String   @default("NEW") // NEW | CONTACTED | ONBOARDING | ACTIVE | CLOSED
+  source    String   @default("WEB")
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([enquiryNo])
+}
+
 model ForexEnquiry {
   id         String   @id @default(cuid())
   enquiryNo  String   @unique
