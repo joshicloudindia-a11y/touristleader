@@ -59,7 +59,7 @@ export default function HotelsPage() {
       <StickyNav active="hotels" />
       <main className="flex-1">
         <section className="relative isolate overflow-hidden pb-40 pt-28 sm:pb-44 sm:pt-32">
-          <Image src="/hotels/hero.jpg" alt="" fill priority sizes="100vw" className="-z-10 object-cover" />
+          <Image src="/heroes/hotels.jpg" alt="" fill priority sizes="100vw" className="-z-10 object-cover" />
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-900/70 via-slate-900/45 to-slate-900/30" />
           <HomeHeader />
           <div className="relative mx-auto max-w-7xl px-4 text-center text-white">
