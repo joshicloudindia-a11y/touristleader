@@ -1,13 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ShieldCheck, Headphones, Leaf, BadgePercent, Plane } from "lucide-react";
+import { ShieldCheck, Headphones, Leaf, BadgePercent, Plane, ArrowRight, Clock, Star, Search, Wallet, Ticket } from "lucide-react";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { StickyNav } from "@/components/home/StickyNav";
 import { Footer } from "@/components/Footer";
 import { SearchWidget } from "@/components/home/SearchWidget";
 import { OffersCarousel } from "@/components/home/OffersCarousel";
 import { WishlistButton } from "@/components/WishlistButton";
-import { BRAND } from "@/lib/constants";
+import { BRAND, AIRLINES } from "@/lib/constants";
 
 const FEATURES = [
   { icon: Leaf, title: "Caring & Sustainable", text: "Carbon-aware itineraries and inclusive fares for every traveller." },
@@ -23,6 +23,36 @@ const DESTS = [
   { city: "Bengaluru", code: "BLR", price: "₹2,199", img: "/destinations/bengaluru.jpg" },
   { city: "Jaipur", code: "JAI", price: "₹2,799", img: "/destinations/jaipur.jpg" },
   { city: "Singapore", code: "SIN", price: "₹18,999", img: "/destinations/singapore.jpg" },
+];
+
+// Routes connect to the flight search flow (prefilled /flights/search → /api/flights/search).
+function flightHref(from: string, to: string, extra = "") {
+  return `/flights/search?tripType=ONE_WAY&from=${from}&to=${to}&cabinClass=Economy&adults=1&children=0&infants=0&passengerType=REGULAR${extra}`;
+}
+
+const ROUTES = [
+  { fromCity: "New Delhi", from: "DEL", toCity: "Mumbai", to: "BOM", price: "₹1,899", hrs: "2h 10m" },
+  { fromCity: "New Delhi", from: "DEL", toCity: "Bengaluru", to: "BLR", price: "₹2,199", hrs: "2h 45m" },
+  { fromCity: "Mumbai", from: "BOM", toCity: "Goa", to: "GOI", price: "₹1,499", hrs: "1h 25m" },
+  { fromCity: "New Delhi", from: "DEL", toCity: "Goa", to: "GOI", price: "₹2,499", hrs: "2h 35m" },
+  { fromCity: "Bengaluru", from: "BLR", toCity: "Hyderabad", to: "HYD", price: "₹1,799", hrs: "1h 15m" },
+  { fromCity: "Chennai", from: "MAA", toCity: "Kolkata", to: "CCU", price: "₹2,899", hrs: "2h 20m" },
+  { fromCity: "Mumbai", from: "BOM", toCity: "New Delhi", to: "DEL", price: "₹1,950", hrs: "2h 05m" },
+  { fromCity: "New Delhi", from: "DEL", toCity: "Dubai", to: "DXB", price: "₹12,499", hrs: "3h 45m" },
+];
+
+const STEPS = [
+  { icon: Search, title: "Search flights", text: "Pick your route, dates and travellers — compare live fares instantly." },
+  { icon: Ticket, title: "Choose your fare", text: "Filter by airline, stops & timings, then pick the fare that suits you." },
+  { icon: Wallet, title: "Pay & fly", text: "Secure payment, wallet & bank offers — e-ticket on email & SMS." },
+];
+
+const FAQS = [
+  { q: "How do I book a flight on Tourist Leader?", a: "Enter your origin, destination, travel dates and number of travellers, then tap Search. Compare live fares, apply filters like airline or non-stop, pick a flight and fare, add passenger details and pay securely. Your e-ticket is sent instantly on email and SMS." },
+  { q: "Can I search flights of a specific airline?", a: "Yes. Use Advanced Search on the home page and type an airline name or code (e.g. IndiGo or 6E). Your results will be filtered to that airline automatically. You can also tap any airline in the 'Top airlines' section below." },
+  { q: "How do I find the cheapest day to fly?", a: "On the results page we show a fare calendar across nearby dates so you can instantly spot the lowest fare and shift your travel by a day or two to save." },
+  { q: "Do you offer special fares for students, seniors or armed forces?", a: "Yes — choose a Fare Type (Student, Senior Citizen, Armed Forces, Medical and more) in the search box to unlock eligible discounts and benefits. Keep the relevant ID handy at the airport." },
+  { q: "Can I cancel my flight and get a refund?", a: "Yes. Cancellation charges depend on the airline and fare rules; the exact refund is always shown before you confirm. Eligible refunds are credited to your original payment method or Tourist Leader wallet." },
 ];
 
 export default function HomePage() {
@@ -89,6 +119,108 @@ export default function HomePage() {
                   <span className="text-sm font-bold text-slate-900">{d.price}</span>
                 </div>
               </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Popular flight routes */}
+        <section className="mx-auto mt-14 max-w-7xl px-4">
+          <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Popular flight routes</h2>
+          <p className="mt-1 text-sm text-slate-500">Most-searched routes — tap to see live fares.</p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {ROUTES.map((r) => (
+              <Link
+                key={`${r.from}-${r.to}`}
+                href={flightHref(r.from, r.to)}
+                className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md"
+              >
+                <div className="flex items-center gap-2 text-slate-900">
+                  <span className="font-bold">{r.fromCity}</span>
+                  <ArrowRight size={16} className="text-brand transition-transform group-hover:translate-x-0.5" />
+                  <span className="font-bold">{r.toCity}</span>
+                </div>
+                <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+                  <span className="flex items-center gap-1"><Plane size={13} /> {r.from}–{r.to}</span>
+                  <span className="flex items-center gap-1"><Clock size={13} /> {r.hrs}</span>
+                </div>
+                <div className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-500">
+                  from <span className="text-base font-extrabold text-brand">{r.price}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Top airlines (wired to Advanced Search ?airline=) */}
+        <section className="mx-auto mt-14 max-w-7xl px-4">
+          <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Top airlines</h2>
+          <p className="mt-1 text-sm text-slate-500">Tap an airline to see its flights on the New Delhi → Mumbai route.</p>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {AIRLINES.map((a) => (
+              <Link
+                key={a.code}
+                href={flightHref("DEL", "BOM", `&airline=${a.code}`)}
+                className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white" style={{ backgroundColor: a.color }}>
+                  <Plane size={18} />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-800">{a.name}</p>
+                  <p className="text-[11px] text-slate-400">{a.code}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Book in 3 easy steps */}
+        <section className="mx-auto mt-14 max-w-7xl px-4">
+          <h2 className="text-center text-xl font-bold text-slate-900 sm:text-2xl">Book a flight in 3 easy steps</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {STEPS.map((s, i) => (
+              <div key={s.title} className="relative rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                <span className="absolute right-5 top-5 text-4xl font-black text-slate-100">{i + 1}</span>
+                <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand/10 text-brand"><s.icon size={24} /></span>
+                <h3 className="mt-4 font-bold text-slate-900">{s.title}</h3>
+                <p className="mt-1 text-sm text-slate-500">{s.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Trust banner */}
+        <section className="mx-auto mt-14 max-w-7xl px-4">
+          <div className="flex flex-col items-center gap-6 rounded-3xl bg-gradient-to-r from-brand-dark to-brand px-6 py-8 text-center text-white sm:flex-row sm:justify-around sm:text-left">
+            {[
+              { icon: Plane, big: "350+", small: "Airlines worldwide" },
+              { icon: BadgePercent, big: "Best Fare", small: "Promise, always on" },
+              { icon: Star, big: "4.6 / 5", small: "Traveller rating" },
+              { icon: ShieldCheck, big: "100%", small: "Secure payments" },
+            ].map((s) => (
+              <div key={s.small} className="flex items-center gap-3">
+                <s.icon size={28} className="opacity-90" />
+                <div>
+                  <p className="text-2xl font-extrabold leading-none">{s.big}</p>
+                  <p className="mt-1 text-sm text-white/85">{s.small}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="mx-auto mb-16 mt-14 max-w-3xl px-4">
+          <h2 className="text-center text-xl font-bold text-slate-900 sm:text-2xl">Frequently asked questions</h2>
+          <div className="mt-6 space-y-3">
+            {FAQS.map((f) => (
+              <details key={f.q} className="group rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-slate-900">
+                  {f.q}
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500 transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600">{f.a}</p>
+              </details>
             ))}
           </div>
         </section>
