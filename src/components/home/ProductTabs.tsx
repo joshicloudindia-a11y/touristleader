@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Plane, BedDouble, Palmtree, Bus, Stamp, CreditCard, ShieldCheck, ChevronDown, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,15 +40,36 @@ function Tab({ tab, active }: { tab: Tab; active: boolean }) {
  */
 export function ProductTabs({ active = "flights", collapseAfter }: { active?: string; collapseAfter?: number }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; right: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // The dropdown is portaled to <body> so it can't be clipped by the StickyNav's
+  // overflow-x-auto tab strip (which was hiding it on mobile/tablet).
+  const toggle = () => {
+    if (open) { setOpen(false); return; }
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setCoords({ top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) });
+    setOpen(true);
+  };
 
   useEffect(() => {
+    if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
     };
+    const close = () => setOpen(false);
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, []);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
 
   if (collapseAfter == null) {
     // In-card nav: horizontal slide (swipe) on mobile/tablet; full single row on desktop.
@@ -73,42 +95,40 @@ export function ProductTabs({ active = "flights", collapseAfter }: { active?: st
       {primary.map((t) => <Tab key={t.id} tab={t} active={active === t.id} />)}
 
       {more.length > 0 && (
-        <div className="relative flex items-stretch" ref={ref}>
-          <button
-            onClick={() => setOpen((o) => !o)}
-            className={cn(
-              "relative flex min-w-[68px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-2 text-center transition-colors sm:min-w-[80px] sm:px-2.5",
-              moreActive ? "text-brand" : "text-slate-600 hover:bg-slate-50"
-            )}
-          >
-            <span className="relative">
-              <LayoutGrid size={24} className={cn(moreActive ? "text-brand" : "text-slate-500")} strokeWidth={1.6} />
-            </span>
-            <span className="flex items-center gap-0.5 text-[11px] font-semibold leading-tight">
-              More <ChevronDown size={12} className={cn("transition-transform", open && "rotate-180")} />
-            </span>
-            {moreActive && <span className="absolute -bottom-1 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-brand" />}
-          </button>
-
-          {open && (
-            <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl">
-              {more.map((t) => (
-                <Link
-                  key={t.id}
-                  href={t.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    active === t.id ? "bg-brand/5 text-brand" : "text-slate-700 hover:bg-slate-50"
-                  )}
-                >
-                  <t.icon size={20} strokeWidth={1.6} className={active === t.id ? "text-brand" : "text-slate-500"} />
-                  {t.label}
-                </Link>
-              ))}
-            </div>
+        <button
+          ref={btnRef}
+          onClick={toggle}
+          className={cn(
+            "relative flex min-w-[68px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-2 text-center transition-colors sm:min-w-[80px] sm:px-2.5",
+            moreActive ? "text-brand" : "text-slate-600 hover:bg-slate-50"
           )}
-        </div>
+        >
+          <LayoutGrid size={24} className={cn(moreActive ? "text-brand" : "text-slate-500")} strokeWidth={1.6} />
+          <span className="flex items-center gap-0.5 text-[11px] font-semibold leading-tight">
+            More <ChevronDown size={12} className={cn("transition-transform", open && "rotate-180")} />
+          </span>
+          {moreActive && <span className="absolute -bottom-1 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-brand" />}
+        </button>
+      )}
+
+      {open && coords && typeof document !== "undefined" && createPortal(
+        <div ref={menuRef} style={{ top: coords.top, right: coords.right }} className="fixed z-[200] w-56 max-w-[calc(100vw-16px)] rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl animate-fade-up">
+          {more.map((t) => (
+            <Link
+              key={t.id}
+              href={t.href}
+              onClick={() => setOpen(false)}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                active === t.id ? "bg-brand/5 text-brand" : "text-slate-700 hover:bg-slate-50"
+              )}
+            >
+              <t.icon size={20} strokeWidth={1.6} className={active === t.id ? "text-brand" : "text-slate-500"} />
+              {t.label}
+            </Link>
+          ))}
+        </div>,
+        document.body
       )}
     </div>
   );
