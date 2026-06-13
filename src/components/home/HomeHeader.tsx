@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Store, Briefcase, Luggage, Heart, Globe, Menu, X } from "lucide-react";
 import { AuthButton } from "@/components/auth/AuthButton";
 
@@ -14,6 +15,12 @@ const UTILITY = [
 
 export function HomeHeader() {
   const [open, setOpen] = useState(false);
+  // lock scroll while the mobile menu overlay is open
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
   return (
     <header className="absolute inset-x-0 top-0 z-30">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
@@ -52,18 +59,26 @@ export function HomeHeader() {
         </div>
       </div>
 
-      {/* Mobile utility dropdown */}
-      {open && (
-        <div className="mx-4 rounded-2xl bg-white p-2 shadow-xl xl:hidden">
-          {UTILITY.map((u) => (
-            <Link key={u.title} href={u.href} onClick={() => setOpen(false)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-slate-50">
-              <u.icon size={20} className="text-brand" strokeWidth={1.6} />
-              <span><span className="block text-sm font-bold text-slate-800">{u.title}</span><span className="block text-xs text-slate-500">{u.sub}</span></span>
-            </Link>
-          ))}
-          <div className="my-1 border-t border-slate-100" />
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-slate-50"><Globe size={20} className="text-brand" /> <span className="text-sm font-semibold text-slate-800">INR | English</span></button>
-        </div>
+      {/* Mobile utility menu — portaled full-screen overlay so it never clashes with the search widget */}
+      {open && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] xl:hidden">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className="absolute right-3 top-3 w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl bg-white p-2 shadow-2xl animate-fade-up">
+            <div className="flex items-center justify-between px-2 py-1">
+              <span className="text-sm font-extrabold text-slate-900">Menu</span>
+              <button onClick={() => setOpen(false)} className="grid h-8 w-8 place-items-center rounded-full text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+            </div>
+            {UTILITY.map((u) => (
+              <Link key={u.title} href={u.href} onClick={() => setOpen(false)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-slate-50">
+                <u.icon size={20} className="text-brand" strokeWidth={1.6} />
+                <span><span className="block text-sm font-bold text-slate-800">{u.title}</span><span className="block text-xs text-slate-500">{u.sub}</span></span>
+              </Link>
+            ))}
+            <div className="my-1 border-t border-slate-100" />
+            <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-slate-50"><Globe size={20} className="text-brand" /> <span className="text-sm font-semibold text-slate-800">INR | English</span></button>
+          </div>
+        </div>,
+        document.body
       )}
     </header>
   );
