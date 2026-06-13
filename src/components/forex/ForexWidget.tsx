@@ -19,6 +19,12 @@ export function ForexWidget() {
 
   useEffect(() => { if (user) setF((p) => ({ ...p, name: p.name || user.name || "", email: p.email || user.email, phone: p.phone || user.phone || "" })); }, [user]);
 
+  // Prefill the request type from links elsewhere on the page (?type=CARD|NOTES).
+  useEffect(() => {
+    const tp = new URLSearchParams(window.location.search).get("type");
+    if (tp === "CARD" || tp === "NOTES") setType(tp);
+  }, []);
+
   const toggleCur = (c: string) => setCurrencies((cs) => cs.includes(c) ? cs.filter((x) => x !== c) : [...cs, c]);
 
   const submit = async () => {
