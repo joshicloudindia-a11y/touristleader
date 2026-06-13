@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Plane, BedDouble, Palmtree, Bus, StickyNote, CreditCard, ShieldCheck, ChevronDown, LayoutGrid } from "lucide-react";
+import { Plane, BedDouble, Palmtree, Bus, Stamp, CreditCard, ShieldCheck, ChevronDown, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -9,7 +9,7 @@ const TABS = [
   { id: "hotels", label: "Hotels", icon: BedDouble, href: "/hotels" },
   { id: "holidays", label: "Holiday Packages", icon: Palmtree, href: "/holidays" },
   { id: "bus", label: "Bus", icon: Bus, href: "/bus" },
-  { id: "visa", label: "Visa", icon: StickyNote, href: "/visa" },
+  { id: "visa", label: "Visa", icon: Stamp, href: "/visa" },
   { id: "forex", label: "Forex Card", icon: CreditCard, href: "/forex" },
   { id: "insurance", label: "Travel Insurance", icon: ShieldCheck, href: "/insurance" },
 ];

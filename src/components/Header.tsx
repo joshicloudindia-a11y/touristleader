@@ -2,12 +2,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { Plane, BedDouble, Palmtree, Bus, StickyNote, Gift, HelpCircle, Menu, X } from "lucide-react";
+import { Plane, BedDouble, Palmtree, Bus, Stamp, Gift, HelpCircle, Menu, X } from "lucide-react";
 import { BRAND, NAV_TABS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { AuthButton } from "@/components/auth/AuthButton";
 
-const ICONS: Record<string, React.ElementType> = { Plane, BedDouble, Palmtree, Bus, StickyNote };
+const ICONS: Record<string, React.ElementType> = { Plane, BedDouble, Palmtree, Bus, Stamp };
 
 function Logo() {
   return (

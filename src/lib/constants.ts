@@ -11,7 +11,7 @@ export const NAV_TABS = [
   { id: "hotels", label: "Hotels", icon: "BedDouble", href: "/hotels" },
   { id: "holidays", label: "Holiday Packages", icon: "Palmtree", href: "/holidays" },
   { id: "bus", label: "Bus", icon: "Bus", href: "/bus" },
-  { id: "visa", label: "Visa", icon: "StickyNote", href: "/visa" },
+  { id: "visa", label: "Visa", icon: "Stamp", href: "/visa" },
 ] as const;
 
 export const TRIP_TYPES = [
