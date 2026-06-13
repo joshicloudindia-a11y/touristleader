@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Store, Briefcase, Luggage, Heart, Menu, X } from "lucide-react";
+import { Store, Briefcase, Luggage, Heart, Menu, X, Plane, BedDouble } from "lucide-react";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { CurrencyLanguageMenu } from "@/components/CurrencyLanguageMenu";
 import { useT, useSyncHtmlLang } from "@/store/preferences";
@@ -12,9 +12,23 @@ export function HomeHeader() {
   const [open, setOpen] = useState(false);
   const t = useT();
   useSyncHtmlLang();
+  // Admin can toggle the partner links (List Your Property / TL Biz) on later.
+  // Default OFF → show Book Your Flights / Book Your Hotels instead.
+  const [cfg, setCfg] = useState({ showListProperty: false, showTlBiz: false });
+  useEffect(() => {
+    fetch("/api/site-config", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setCfg({ showListProperty: !!d.showListProperty, showTlBiz: !!d.showTlBiz }))
+      .catch(() => {});
+  }, []);
+
   const UTILITY = [
-    { icon: Store, title: t("nav_listProperty"), sub: t("nav_listPropertySub"), href: "/list-property" },
-    { icon: Briefcase, title: t("nav_tlBiz"), sub: t("nav_tlBizSub"), href: "/tl-biz" },
+    cfg.showListProperty
+      ? { icon: Store, title: t("nav_listProperty"), sub: t("nav_listPropertySub"), href: "/list-property" }
+      : { icon: Plane, title: t("nav_bookFlights"), sub: t("nav_bookFlightsSub"), href: "/" },
+    cfg.showTlBiz
+      ? { icon: Briefcase, title: t("nav_tlBiz"), sub: t("nav_tlBizSub"), href: "/tl-biz" }
+      : { icon: BedDouble, title: t("nav_bookHotels"), sub: t("nav_bookHotelsSub"), href: "/hotels" },
     { icon: Luggage, title: t("nav_myTrips"), sub: t("nav_myTripsSub"), href: "/account/trips" },
     { icon: Heart, title: t("nav_wishlist"), sub: t("nav_wishlistSub"), href: "/account/wishlist" },
   ];

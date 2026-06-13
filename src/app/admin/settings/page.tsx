@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Save, Check, IndianRupee, Percent, Building2, Receipt, Users as UsersIcon } from "lucide-react";
+import { Loader2, Save, Check, IndianRupee, Percent, Building2, Receipt, Users as UsersIcon, PanelTop } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { INDIAN_STATES } from "@/lib/states";
@@ -14,9 +14,22 @@ export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false);
   const set = <K extends keyof BillingConfigData>(k: K, v: BillingConfigData[K]) => setCfg((c) => ({ ...c, [k]: v }));
 
+  // Header navigation toggles (front-end links)
+  const [site, setSite] = useState({ showListProperty: false, showTlBiz: false });
+  const [savingSite, setSavingSite] = useState(false);
+  const [savedSite, setSavedSite] = useState(false);
+
   useEffect(() => {
     fetch("/api/admin/billing", { cache: "no-store" }).then((r) => r.json()).then((d) => { if (d.config) setCfg(d.config); }).finally(() => setLoading(false));
+    fetch("/api/site-config", { cache: "no-store" }).then((r) => r.json()).then((d) => setSite({ showListProperty: !!d.showListProperty, showTlBiz: !!d.showTlBiz })).catch(() => {});
   }, []);
+
+  const saveSite = async (next: { showListProperty: boolean; showTlBiz: boolean }) => {
+    setSite(next); setSavingSite(true); setSavedSite(false);
+    const res = await fetch("/api/site-config", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next) });
+    setSavingSite(false);
+    if (res.ok) { setSavedSite(true); setTimeout(() => setSavedSite(false), 2000); }
+  };
 
   const save = async () => {
     setSaving(true); setSaved(false);
@@ -83,6 +96,27 @@ export default function AdminSettingsPage() {
               </div>
             </Card>
 
+            {/* Header navigation links */}
+            <Card icon={PanelTop} title="Header navigation links" sub="Show or hide the partner links in the site header. When hidden, 'Book Your Flights' & 'Book Your Hotels' are shown instead.">
+              <div className="space-y-2">
+                <Toggle
+                  label="List Your Property"
+                  sub={site.showListProperty ? "Visible in header" : "Hidden — showing 'Book Your Flights'"}
+                  on={site.showListProperty}
+                  onToggle={() => saveSite({ ...site, showListProperty: !site.showListProperty })}
+                />
+                <Toggle
+                  label="TL Biz"
+                  sub={site.showTlBiz ? "Visible in header" : "Hidden — showing 'Book Your Hotels'"}
+                  on={site.showTlBiz}
+                  onToggle={() => saveSite({ ...site, showTlBiz: !site.showTlBiz })}
+                />
+              </div>
+              <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-400">
+                {savingSite ? <><Loader2 size={13} className="animate-spin" /> Saving…</> : savedSite ? <><Check size={13} className="text-emerald-600" /> Saved — applies on next page load</> : "Toggle anytime; changes save automatically."}
+              </p>
+            </Card>
+
             <div className="sticky bottom-0 flex items-center gap-3 border-t border-slate-200 bg-slate-100/80 py-3 backdrop-blur">
               <Button onClick={save} disabled={saving} className="px-8">{saving ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : saved ? <><Check size={16} /> Saved</> : <><Save size={16} /> Save settings</>}</Button>
               <p className="text-xs text-slate-400">Changes apply to new bookings immediately.</p>
@@ -137,4 +171,23 @@ function Card({ icon: Icon, title, sub, children }: { icon: React.ElementType; t
 }
 function L({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block"><span className="mb-1 block text-xs font-semibold text-slate-600">{label}</span>{children}</label>;
+}
+function Toggle({ label, sub, on, onToggle }: { label: string; sub: string; on: boolean; onToggle: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3.5 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-slate-800">{label}</p>
+        <p className="truncate text-xs text-slate-500">{sub}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        onClick={onToggle}
+        className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", on ? "bg-brand" : "bg-slate-300")}
+      >
+        <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all", on ? "left-[22px]" : "left-0.5")} />
+      </button>
+    </div>
+  );
 }

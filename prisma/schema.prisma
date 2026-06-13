@@ -149,6 +149,14 @@ model BillingConfig {
   updatedAt               DateTime @updatedAt @default(now())
 }
 
+// Front-end toggles controlled from the Super Admin panel (singleton row).
+model SiteConfig {
+  id               String   @id @default("default")
+  showListProperty Boolean  @default(false) // header "List Your Property" link
+  showTlBiz        Boolean  @default(false) // header "TL Biz" link
+  updatedAt        DateTime @updatedAt @default(now())
+}
+
 // One wallet per user (customers store value; agents accrue commission owed).
 model Wallet {
   id           String              @id @default(cuid())
