@@ -37,7 +37,7 @@ export default function HotelsPage() {
           </div>
         </section>
 
-        <div className="relative z-20 mx-auto -mt-36 max-w-6xl px-4">
+        <div className="relative z-20 mx-auto -mt-36 max-w-7xl px-4">
           <HotelSearchWidget />
         </div>
 

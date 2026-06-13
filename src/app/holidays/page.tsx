@@ -28,7 +28,7 @@ export default function HolidaysPage() {
           </div>
         </section>
 
-        <div className="relative z-20 mx-auto -mt-36 max-w-6xl px-4"><PackageSearchWidget /></div>
+        <div className="relative z-20 mx-auto -mt-36 max-w-7xl px-4"><PackageSearchWidget /></div>
 
         <section className="mx-auto mt-16 max-w-7xl px-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
