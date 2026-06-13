@@ -5,7 +5,7 @@ import { BRAND } from "@/lib/constants";
 
 const COLS = [
   { title: "Company", links: ["About Us", "Careers", "Press", "Sustainability", "Contact"] },
-  { title: "Products", links: ["Flights", "Hotels", "Holiday Packages", "Bus", "Cabs", "Visa"] },
+  { title: "Products", links: ["Flights", "Hotels", "Holiday Packages", "Bus", "Visa", "Forex"] },
   { title: "Support", links: ["Help Centre", "Cancellation", "Refund Policy", "Baggage Rules", "Travel Insurance"] },
   { title: "Discover", links: ["Cheap Flights", "Offers", "Gift Cards", "Mobile App", "Blog"] },
 ];
