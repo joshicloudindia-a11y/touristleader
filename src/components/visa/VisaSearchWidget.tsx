@@ -39,6 +39,15 @@ export function VisaSearchWidget() {
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
 
+  // Prefill from links elsewhere on the page (?country=…&purpose=…).
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const c = sp.get("country");
+    const p = sp.get("purpose");
+    if (c && VISA_COUNTRIES.includes(c)) setCountry(c);
+    if (p && VISA_PURPOSES.includes(p)) setPurpose(p);
+  }, []);
+
   const submit = () => {
     setError("");
     if (!country) { setError("Please select a country."); return; }
