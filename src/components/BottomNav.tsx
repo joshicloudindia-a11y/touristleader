@@ -8,9 +8,9 @@ import { useT } from "@/store/preferences";
 const ITEMS = [
   { id: "flights", icon: Plane, key: "tab_flights", href: "/" },
   { id: "hotels", icon: BedDouble, key: "tab_hotels", href: "/hotels" },
-  { id: "holidays", icon: Palmtree, key: "tab_holidays", href: "/holidays", center: true },
+  { id: "holidays", icon: Palmtree, key: "bn_holidays", href: "/holidays", center: true },
   { id: "bus", icon: Bus, key: "tab_bus", href: "/bus" },
-  { id: "account", icon: User, key: "auth_account", href: "/account" },
+  { id: "account", icon: User, key: "bn_account", href: "/account" },
 ];
 
 /** Mobile-only bottom navigation. The center item is raised + highlighted. */
@@ -40,7 +40,7 @@ export function BottomNav() {
                     <span className={cn("-mt-6 grid h-14 w-14 place-items-center rounded-full text-white shadow-lg ring-4 ring-white transition-transform active:scale-95", active ? "bg-brand-dark" : "bg-gradient-to-br from-brand to-sky-500")}>
                       <it.icon size={26} strokeWidth={2} />
                     </span>
-                    <span className={cn("mt-0.5 text-[11px] font-bold", active ? "text-brand" : "text-slate-600")}>{label}</span>
+                    <span className={cn("mt-0.5 whitespace-nowrap text-[11px] font-bold", active ? "text-brand" : "text-slate-600")}>{label}</span>
                   </Link>
                 </li>
               );
@@ -49,7 +49,7 @@ export function BottomNav() {
               <li key={it.id} className="flex-1">
                 <Link href={it.href} className={cn("flex flex-col items-center gap-0.5 py-2 transition-colors", active ? "text-brand" : "text-slate-500")}>
                   <it.icon size={22} strokeWidth={active ? 2.2 : 1.7} />
-                  <span className="text-[11px] font-semibold leading-none">{label}</span>
+                  <span className="whitespace-nowrap text-[11px] font-semibold leading-none">{label}</span>
                 </Link>
               </li>
             );

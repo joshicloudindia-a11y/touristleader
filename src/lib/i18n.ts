@@ -10,6 +10,7 @@ export const DICT: Record<string, Record<string, string>> = {
     nav_wishlist: "Wishlist", nav_wishlistSub: "Saved favourites",
     nav_bookFlights: "Book Your Flights", nav_bookFlightsSub: "Best fares, live search",
     nav_bookHotels: "Book Your Hotels", nav_bookHotelsSub: "50,000+ stays",
+    bn_holidays: "Holidays", bn_account: "Account",
     hdr_offers: "Offers", hdr_help: "Help", hdr_menu: "Menu",
     // auth
     auth_login: "Login / Signup", auth_hi: "Hi", auth_account: "Account",
@@ -57,6 +58,7 @@ export const DICT: Record<string, Record<string, string>> = {
     nav_wishlist: "पसंदीदा", nav_wishlistSub: "सहेजे गए",
     nav_bookFlights: "फ़्लाइट बुक करें", nav_bookFlightsSub: "बेहतरीन किराए, लाइव सर्च",
     nav_bookHotels: "होटल बुक करें", nav_bookHotelsSub: "50,000+ स्टे",
+    bn_holidays: "हॉलिडे", bn_account: "अकाउंट",
     hdr_offers: "ऑफ़र", hdr_help: "मदद", hdr_menu: "मेन्यू",
     auth_login: "लॉगिन / साइनअप", auth_hi: "नमस्ते", auth_account: "अकाउंट",
     auth_myAccount: "मेरा अकाउंट", auth_myTrips: "मेरी यात्राएँ", auth_myWallet: "मेरा वॉलेट",
