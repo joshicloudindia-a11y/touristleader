@@ -7,10 +7,10 @@ import { T } from "@/components/T";
 const COLS = [
   { key: "foot_company", links: [
     { label: "About Us", href: "/about" },
-    { label: "Careers", href: "/about#careers" },
-    { label: "Press", href: "/about#press" },
-    { label: "Sustainability", href: "/about#sustainability" },
-    { label: "Contact", href: "/about#contact" },
+    { label: "Careers", href: "/careers" },
+    { label: "Press", href: "/press" },
+    { label: "Sustainability", href: "/sustainability" },
+    { label: "Contact", href: "/contact" },
   ] },
   { key: "foot_products", links: [
     { label: "Flights", href: "/" },
@@ -22,17 +22,17 @@ const COLS = [
   ] },
   { key: "foot_support", links: [
     { label: "Help Centre", href: "/help" },
-    { label: "Cancellation", href: "/help?topic=cancellation" },
-    { label: "Refund Policy", href: "/help?topic=refund" },
-    { label: "Baggage Rules", href: "/help?topic=baggage" },
+    { label: "Cancellation", href: "/cancellation" },
+    { label: "Refund Policy", href: "/refund-policy" },
+    { label: "Baggage Rules", href: "/baggage-rules" },
     { label: "Travel Insurance", href: "/insurance" },
   ] },
   { key: "foot_discover", links: [
-    { label: "Cheap Flights", href: "/flights/search" },
+    { label: "Cheap Flights", href: "/cheap-flights" },
     { label: "Offers", href: "/offers" },
-    { label: "Gift Cards", href: "/about#gift-cards" },
-    { label: "Mobile App", href: "/about#mobile-app" },
-    { label: "Blog", href: "/about#blog" },
+    { label: "Gift Cards", href: "/gift-cards" },
+    { label: "Mobile App", href: "/mobile-app" },
+    { label: "Blog", href: "/blog" },
   ] },
 ];
 
