@@ -74,19 +74,21 @@ export function ForexWidget() {
 
         {/* contact / details */}
         <p className="mb-2 mt-4 text-sm font-bold text-slate-900">Please share about you</p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Field icon={User} placeholder="Name *" value={f.name} onValue={(v) => set("name", v)} />
           <Field icon={Phone} placeholder="Mobile Number *" value={f.phone} onValue={(v) => set("phone", v)} />
           <Field icon={Mail} placeholder="Email *" value={f.email} onValue={(v) => set("email", v)} type="email" />
           {type === "CARD"
             ? <Field icon={FileText} placeholder="PAN number" value={f.pan} onValue={(v) => set("pan", v)} />
             : <Field icon={Banknote} placeholder="Approx. amount (optional)" value={f.amount} onValue={(v) => set("amount", v)} />}
-          <div className="sm:col-span-2"><Field icon={MapPin} placeholder={type === "CARD" ? "Address *" : "Delivery address (optional)"} value={f.address} onValue={(v) => set("address", v)} /></div>
+          <div className="lg:col-span-2"><Field icon={MapPin} placeholder={type === "CARD" ? "Address *" : "Delivery address (optional)"} value={f.address} onValue={(v) => set("address", v)} /></div>
         </div>
 
         {error && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-600">{error}</p>}
-        <Button className="mt-4 w-full sm:w-auto sm:px-10" onClick={submit} disabled={busy}>{busy ? <><Loader2 size={16} className="animate-spin" /> Submitting…</> : <><Send size={15} /> Submit Enquiry</>}</Button>
-        <p className="mt-2 text-xs text-slate-400">Best rates · doorstep delivery · RBI-authorised partners.</p>
+        <div className="mt-4 flex flex-col-reverse items-center justify-between gap-2 sm:flex-row">
+          <p className="text-xs text-slate-400">Best rates · doorstep delivery · RBI-authorised partners.</p>
+          <Button className="w-full sm:w-auto sm:px-10" onClick={submit} disabled={busy}>{busy ? <><Loader2 size={16} className="animate-spin" /> Submitting…</> : <><Send size={15} /> Submit Enquiry</>}</Button>
+        </div>
       </div>
     </div>
   );
