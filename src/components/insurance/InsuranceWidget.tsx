@@ -29,6 +29,12 @@ export function InsuranceWidget() {
 
   useEffect(() => { if (user) setF((p) => ({ ...p, name: p.name || user.name || "", email: p.email || user.email, phone: p.phone || user.phone || "" })); }, [user]);
 
+  // Prefill the insurance type from links elsewhere on the page (?type=TRAVEL|MOTOR|HOUSE|LIFE).
+  useEffect(() => {
+    const tp = new URLSearchParams(window.location.search).get("type") as Type | null;
+    if (tp && ["TRAVEL", "MOTOR", "HOUSE", "LIFE"].includes(tp)) setType(tp);
+  }, []);
+
   const submit = async () => {
     setError("");
     if (type === "TRAVEL" && !f.destination) { setError("Please select where you're going."); return; }
