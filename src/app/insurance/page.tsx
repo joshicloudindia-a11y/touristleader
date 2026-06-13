@@ -27,9 +27,9 @@ export default function InsurancePage() {
           </div>
         </section>
 
-        <div className="relative z-20 mx-auto -mt-36 max-w-6xl px-4"><InsuranceWidget /></div>
+        <div className="relative z-20 mx-auto -mt-36 max-w-7xl px-4"><InsuranceWidget /></div>
 
-        <section className="mx-auto mt-16 max-w-6xl px-4">
+        <section className="mx-auto mt-16 max-w-7xl px-4">
           <h2 className="mb-4 text-center text-lg font-bold text-slate-900">International Travel + Medical Insurance &amp; Assistance</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {FEATURES.map((f) => (

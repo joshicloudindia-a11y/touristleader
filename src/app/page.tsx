@@ -42,17 +42,17 @@ export default function HomePage() {
         </section>
 
         {/* Search widget overlapping hero (z-20 so it paints above the positioned hero) */}
-        <div className="relative z-20 mx-auto -mt-36 max-w-6xl px-4">
+        <div className="relative z-20 mx-auto -mt-36 max-w-7xl px-4">
           <SearchWidget />
         </div>
 
         {/* Offers */}
-        <section className="mx-auto mt-14 max-w-6xl px-4">
+        <section className="mx-auto mt-14 max-w-7xl px-4">
           <OffersCarousel />
         </section>
 
         {/* Features */}
-        <section className="mx-auto mt-12 max-w-6xl px-4">
+        <section className="mx-auto mt-12 max-w-7xl px-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {FEATURES.map((f) => (
               <div key={f.title} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
@@ -67,7 +67,7 @@ export default function HomePage() {
         </section>
 
         {/* Popular destinations */}
-        <section className="mx-auto mt-14 max-w-6xl px-4">
+        <section className="mx-auto mt-14 max-w-7xl px-4">
           <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Popular destinations</h2>
           <p className="mt-1 text-sm text-slate-500">Handpicked fares to get you packing.</p>
           <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
