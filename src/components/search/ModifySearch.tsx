@@ -93,12 +93,12 @@ export function ModifySearch({ query }: { query: SearchQuery }) {
 
             {/* Depart */}
             <div className="rounded-xl border border-slate-200 lg:min-w-[120px]">
-              <DateField label="Depart" value={departDate} min={tomorrow(0)} onChange={setDepartDate} compact />
+              <DateField label="Depart" value={departDate} min={tomorrow(0)} onChange={setDepartDate} compact mode="depart" rangeOther={returnDate} showFares from={from} to={to} />
             </div>
 
             {/* Return */}
             <div className="rounded-xl border border-slate-200 lg:min-w-[120px]">
-              <DateField label="Return" value={returnDate} min={departDate} placeholder="Select Return" compact
+              <DateField label="Return" value={returnDate} min={departDate} placeholder="Select Return" compact mode="return" rangeOther={departDate} showFares from={from} to={to} align="right"
                 onActivate={() => { if (tripType !== "ROUND_TRIP") { setTripType("ROUND_TRIP"); if (!returnDate) setReturnDate(tomorrow(7)); } }}
                 onChange={(v) => { setReturnDate(v); if (v) setTripType("ROUND_TRIP"); }} />
             </div>

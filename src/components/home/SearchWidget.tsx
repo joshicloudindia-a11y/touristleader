@@ -131,7 +131,7 @@ export function SearchWidget() {
                   <div className="min-w-0 pl-5"><AirportSelect label="To City" value={leg.to} onChange={(v) => updateLeg(i, { to: v })} align="right" /></div>
                   <button onClick={() => swapLeg(i)} className="absolute left-1/2 top-1/2 z-20 grid h-9 w-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-brand shadow-md transition-transform hover:rotate-180" aria-label="Swap"><ArrowLeftRight size={16} /></button>
                 </div>
-                <div className="md:col-span-3"><DateField label="Depart" value={leg.date} min={tomorrow(0)} onChange={(v) => updateLeg(i, { date: v })} /></div>
+                <div className="md:col-span-3"><DateField label="Depart" value={leg.date} min={tomorrow(0)} onChange={(v) => updateLeg(i, { date: v })} showFares from={leg.from} to={leg.to} /></div>
                 <div className="flex items-center justify-center px-3 py-3 md:col-span-4">
                   {i === 0 ? (
                     <div className="w-full"><TravellerSelect travellers={travellers} cabinClass={cabinClass} onChange={(t, c) => { setTravellers(t); setCabinClass(c); }} /></div>
@@ -162,7 +162,7 @@ export function SearchWidget() {
               </button>
             </div>
             <div className="border-b border-slate-200 sm:border-r sm:border-b-0 md:col-span-2 md:border-b-0">
-              <DateField label="Departure" value={departDate} min={tomorrow(0)} onChange={setDepartDate} />
+              <DateField label="Departure" value={departDate} min={tomorrow(0)} onChange={setDepartDate} mode="depart" rangeOther={returnDate} showFares from={from} to={to} align="left" />
             </div>
             <div className="border-b border-slate-200 sm:border-b-0 md:col-span-2">
               <DateField
@@ -170,6 +170,12 @@ export function SearchWidget() {
                 value={returnDate}
                 min={departDate}
                 placeholder="Tap to add a return date for bigger discounts"
+                mode="return"
+                rangeOther={departDate}
+                showFares
+                from={from}
+                to={to}
+                align="right"
                 onActivate={() => { if (!roundTrip && !group) { setTripType("ROUND_TRIP"); if (!returnDate) setReturnDate(tomorrow(7)); } }}
                 onChange={(v) => { setReturnDate(v); if (v && !group) setTripType("ROUND_TRIP"); }}
               />

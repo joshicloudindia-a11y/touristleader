@@ -1,7 +1,8 @@
 "use client";
-import { useRef } from "react";
+import { useState } from "react";
 import { Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CalendarPopover } from "./CalendarPopover";
 
 function prettyDate(iso: string) {
   if (!iso) return null;
@@ -14,10 +15,12 @@ function prettyDate(iso: string) {
   };
 }
 
-/** A fully-clickable date cell: a hidden native date input opens via showPicker(),
- *  with a styled display on top. Used in the home search widget and modify bar. */
+/** A fully-clickable date cell that opens an MMT-style dual-month calendar
+ *  (with optional fare hints and depart/return range highlighting). */
 export function DateField({
   label, value, min, onChange, placeholder, onActivate, compact = false,
+  // calendar options
+  mode = "single", rangeOther = "", showFares = false, from = "", to = "", align = "left",
 }: {
   label: string;
   value: string;
@@ -26,15 +29,17 @@ export function DateField({
   placeholder?: string;
   onActivate?: () => void;
   compact?: boolean;
+  mode?: "single" | "depart" | "return";
+  rangeOther?: string;
+  showFares?: boolean;
+  from?: string;
+  to?: string;
+  align?: "left" | "right";
 }) {
-  const ref = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
   const p = prettyDate(value);
-  const openPicker = () => {
-    onActivate?.();
-    const el = ref.current;
-    if (!el) return;
-    try { el.showPicker(); } catch { el.focus(); }
-  };
+  const openPicker = () => { onActivate?.(); setOpen(true); };
+
   return (
     <div className="relative h-full">
       <button type="button" onClick={openPicker} className={cn("flex h-full w-full flex-col items-start text-left transition-colors hover:bg-slate-50", compact ? "rounded-xl px-3 py-2" : "rounded-xl px-4 py-3")}>
@@ -52,7 +57,21 @@ export function DateField({
           <span className={cn("text-xs text-slate-400", compact ? "mt-1" : "mt-1.5")}>{placeholder}</span>
         )}
       </button>
-      <input ref={ref} type="date" value={value} min={min} onChange={(e) => onChange(e.target.value)} aria-label={label} className="pointer-events-none absolute bottom-2 left-4 h-px w-px opacity-0" tabIndex={-1} />
+
+      {open && (
+        <CalendarPopover
+          value={value}
+          minIso={min}
+          onSelect={onChange}
+          onClose={() => setOpen(false)}
+          mode={mode}
+          rangeOther={rangeOther}
+          showFares={showFares}
+          from={from}
+          to={to}
+          align={align}
+        />
+      )}
     </div>
   );
 }
