@@ -37,6 +37,11 @@ export default function HelpPage() {
   useEffect(() => {
     if (user) setForm((f) => ({ ...f, name: f.name || user.name || "", email: f.email || user.email || "", phone: f.phone || user.phone || "" }));
   }, [user]);
+  // Preselect the support category from footer links (?topic=cancellation|refund|baggage).
+  useEffect(() => {
+    const topic = new URLSearchParams(window.location.search).get("topic")?.toUpperCase();
+    if (topic && CATEGORIES.some((c) => c.id === topic)) setForm((f) => ({ ...f, category: topic }));
+  }, []);
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
