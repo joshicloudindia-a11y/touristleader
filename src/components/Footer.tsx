@@ -5,10 +5,35 @@ import { BRAND } from "@/lib/constants";
 import { T } from "@/components/T";
 
 const COLS = [
-  { key: "foot_company", links: ["About Us", "Careers", "Press", "Sustainability", "Contact"] },
-  { key: "foot_products", links: ["Flights", "Hotels", "Holiday Packages", "Bus", "Visa", "Forex"] },
-  { key: "foot_support", links: ["Help Centre", "Cancellation", "Refund Policy", "Baggage Rules", "Travel Insurance"] },
-  { key: "foot_discover", links: ["Cheap Flights", "Offers", "Gift Cards", "Mobile App", "Blog"] },
+  { key: "foot_company", links: [
+    { label: "About Us", href: "/help" },
+    { label: "Careers", href: "/help" },
+    { label: "Press", href: "/help" },
+    { label: "Sustainability", href: "/help" },
+    { label: "Contact", href: "/help" },
+  ] },
+  { key: "foot_products", links: [
+    { label: "Flights", href: "/" },
+    { label: "Hotels", href: "/hotels" },
+    { label: "Holiday Packages", href: "/holidays" },
+    { label: "Bus", href: "/bus" },
+    { label: "Visa", href: "/visa" },
+    { label: "Forex", href: "/forex" },
+  ] },
+  { key: "foot_support", links: [
+    { label: "Help Centre", href: "/help" },
+    { label: "Cancellation", href: "/account/trips" },
+    { label: "Refund Policy", href: "/help" },
+    { label: "Baggage Rules", href: "/help" },
+    { label: "Travel Insurance", href: "/insurance" },
+  ] },
+  { key: "foot_discover", links: [
+    { label: "Cheap Flights", href: "/" },
+    { label: "Offers", href: "/offers" },
+    { label: "Gift Cards", href: "/offers" },
+    { label: "Mobile App", href: "/help" },
+    { label: "Blog", href: "/help" },
+  ] },
 ];
 
 export function Footer() {
@@ -40,8 +65,8 @@ export function Footer() {
               <h4 className="mb-3 text-sm font-semibold text-white"><T k={col.key} /></h4>
               <ul className="space-y-2 text-sm">
                 {col.links.map((l) => (
-                  <li key={l}>
-                    <Link href="#" className="text-slate-400 hover:text-white transition-colors">{l}</Link>
+                  <li key={l.label}>
+                    <Link href={l.href} className="text-slate-400 hover:text-white transition-colors">{l.label}</Link>
                   </li>
                 ))}
               </ul>
