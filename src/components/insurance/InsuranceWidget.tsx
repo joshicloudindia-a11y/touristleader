@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plane, Car, Home, HeartPulse, User, Mail, Phone, MapPin, Send, Loader2, CheckCircle2, ChevronDown, Users, FileText } from "lucide-react";
-import { DateField } from "@/components/home/DateField";
+import { Plane, Car, Home, HeartPulse, User, Mail, Phone, MapPin, Send, Loader2, CheckCircle2, ChevronDown, Users, FileText, Calendar } from "lucide-react";
 import { ProductTabs } from "@/components/home/ProductTabs";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/store/auth";
@@ -76,14 +75,14 @@ export function InsuranceWidget() {
           {type === "TRAVEL" && <>
             <Select icon={User} label="Citizen" value={f.citizen} options={CITIZENSHIP} onValue={(v) => set("citizen", v)} />
             <Select icon={Plane} label="Going to *" value={f.destination} placeholder="Select country" options={VISA_COUNTRIES} onValue={(v) => set("destination", v)} />
-            <div className="rounded-xl border border-slate-200"><DateField label="Departure" value={f.departure} min={dayOffset(0)} onChange={(v) => set("departure", v)} compact /></div>
-            <div className="rounded-xl border border-slate-200"><DateField label="Return" value={f.ret} min={f.departure} onChange={(v) => set("ret", v)} compact /></div>
+            <DateInput label="Departure" value={f.departure} min={dayOffset(0)} onValue={(v) => set("departure", v)} />
+            <DateInput label="Return" value={f.ret} min={f.departure} onValue={(v) => set("ret", v)} />
             <Select icon={Users} label="Travellers" value={f.travellers} options={Array.from({ length: 9 }, (_, i) => String(i + 1))} onValue={(v) => set("travellers", v)} />
           </>}
           {type === "MOTOR" && <>
             <Select icon={Car} label="Vehicle type *" value={f.vehicleType} placeholder="Select vehicle" options={VEHICLE_TYPES} onValue={(v) => set("vehicleType", v)} />
             <Field icon={FileText} placeholder="Registration number" value={f.registration} onValue={(v) => set("registration", v)} />
-            <div className="rounded-xl border border-slate-200"><DateField label="Previous policy expiry" value={f.prevExpiry} onChange={(v) => set("prevExpiry", v)} placeholder="Select date" compact /></div>
+            <DateInput label="Previous policy expiry" value={f.prevExpiry} onValue={(v) => set("prevExpiry", v)} />
           </>}
           {type === "HOUSE" && <Select icon={Home} label="Property type" value={f.propertyKind} placeholder="Select type" options={PROPERTY_KIND} onValue={(v) => set("propertyKind", v)} />}
           {type === "LIFE" && <Field icon={HeartPulse} placeholder="Your age" value={f.age} onValue={(v) => set("age", v)} type="number" />}
@@ -110,6 +109,16 @@ function Field({ icon: Icon, value, onValue, placeholder, type = "text" }: { ico
     <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 focus-within:border-brand">
       <Icon size={16} className="shrink-0 text-slate-400" />
       <input type={type} value={value} onChange={(e) => onValue(e.target.value)} placeholder={placeholder} className="w-full bg-transparent py-2.5 text-sm outline-none" />
+    </div>
+  );
+}
+
+function DateInput({ label, value, min, onValue }: { label: string; value: string; min?: string; onValue: (v: string) => void }) {
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 focus-within:border-brand">
+      <Calendar size={16} className="shrink-0 text-slate-400" />
+      <span className="shrink-0 text-xs font-medium text-slate-400">{label}</span>
+      <input type="date" value={value} min={min} onChange={(e) => onValue(e.target.value)} aria-label={label} className="w-full bg-transparent py-2.5 text-sm text-slate-700 outline-none" />
     </div>
   );
 }
