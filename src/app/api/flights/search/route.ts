@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchFlights, fareCalendar } from "@/lib/benzy";
+import { searchFlights as benzySearch, fareCalendar } from "@/lib/benzy";
+import { amadeusConfigured, searchFlights as amadeusSearch } from "@/lib/amadeus";
 import type { SearchQuery, TripType, CabinClass } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,8 @@ function parseQuery(sp: URLSearchParams): SearchQuery {
 
 export async function GET(req: NextRequest) {
   const q = parseQuery(req.nextUrl.searchParams);
-  const { flights, live } = await searchFlights(q);
+  // Amadeus (1A SOAP) is the primary flight provider when credentials are set;
+  // otherwise fall back to the Benzy client (which itself falls back to demo data).
+  const { flights, live } = amadeusConfigured() ? await amadeusSearch(q) : await benzySearch(q);
   return NextResponse.json({ query: q, flights, calendar: fareCalendar(q), live });
 }
