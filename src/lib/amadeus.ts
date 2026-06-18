@@ -289,7 +289,9 @@ function parseFmptb(xml: string, q: SearchQuery): Flight[] {
 // ---------------------------------------------------------------------------
 
 export async function searchFlights(q: SearchQuery): Promise<{ flights: Flight[]; live: boolean }> {
-  if (!amadeusConfigured()) return { flights: generateFlights(q), live: false };
+  // Live calls require the credentials AND an explicit AMADEUS_LIVE=1 switch
+  // (so dev/preview never hits the live GDS by accident). Otherwise demo data.
+  if (!amadeusConfigured() || !cfg.forceLive) return { flights: generateFlights(q), live: false };
   try {
     const xml = await soapCall(cfg.searchAction, buildFmptbRequest(q));
     if (/<(?:\w+:)?Fault\b/.test(xml)) {
