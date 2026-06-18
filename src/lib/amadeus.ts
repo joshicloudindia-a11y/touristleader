@@ -30,8 +30,8 @@ const cfg = {
   wsUser: (process.env.AMADEUS_WS_USER || "").trim(),
   wsPassword: process.env.AMADEUS_WS_PASSWORD || "",
   officeId: (process.env.AMADEUS_OFFICE_ID || "").trim(),
-  searchAction: (process.env.AMADEUS_SEARCH_ACTION || "http://webservices.amadeus.com/FMPTBQ_12_4_1A").trim(),
-  searchNs: (process.env.AMADEUS_SEARCH_NS || "http://xml.amadeus.com/FMPTBQ_12_4_1A").trim(),
+  searchAction: (process.env.AMADEUS_SEARCH_ACTION || "http://webservices.amadeus.com/FMPTBQ_24_6_1A").trim(),
+  searchNs: (process.env.AMADEUS_SEARCH_NS || "http://xml.amadeus.com/FMPTBQ_24_6_1A").trim(),
   debug: process.env.AMADEUS_DEBUG === "1",
   forceLive: process.env.AMADEUS_LIVE === "1",
 };
