@@ -9,6 +9,19 @@ import { computeCommission } from "@/lib/billing-core";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Which API/data source produced this booking, for display in the admin panel.
+ * A live Amadeus response tags flights with an "AM-" id; otherwise we fall back
+ * to the provider's live flag (else demo data). Hotels use Benzy, bus uses BDSD.
+ */
+function flightSource(flight: { id?: string } | null | undefined): string {
+  if (typeof flight?.id === "string" && flight.id.startsWith("AM-")) return "AMADEUS";
+  if (process.env.BENZY_LIVE === "1") return "BENZY";
+  return "DEMO";
+}
+const hotelSource = () => (process.env.BENZY_LIVE === "1" ? "BENZY" : "DEMO");
+const busSource = () => (process.env.BUS_LIVE === "1" ? "BDSD" : "DEMO");
+
 /** If the booker is an agent, credit their commission (+GST) to their wallet as PENDING. */
 async function attributeAgentCommission(bookingRef: string, bookingTotal: number) {
   try {
@@ -103,6 +116,7 @@ export async function POST(req: NextRequest) {
           userId: sessionUser?.id || null,
           bookingRef,
           pnr,
+          source: flightSource(flight),
           status: "CONFIRMED",
           tripType: query.tripType,
           passengerType: query.passengerType,
@@ -210,6 +224,7 @@ async function createHotelBooking(body: HotelBookingBody, paymentOk: boolean) {
         bookingRef,
         pnr: confirmationNo,
         bookingType: "HOTEL",
+        source: hotelSource(),
         status: "CONFIRMED",
         tripType: "ONE_WAY",
         origin: query.city,
@@ -288,7 +303,7 @@ async function createBusBooking(body: BusBookingBody, paymentOk: boolean) {
     await prisma.booking.create({
       data: {
         userId: sessionUser?.id || null,
-        bookingRef, pnr: ticketNo, bookingType: "BUS", status: "CONFIRMED", tripType: "ONE_WAY",
+        bookingRef, pnr: ticketNo, bookingType: "BUS", source: busSource(), status: "CONFIRMED", tripType: "ONE_WAY",
         origin: query.from, destination: query.to, departDate: new Date(bus.departTime),
         cabinClass: bus.busType, adults: passengers.length || seats.length,
         baseFare: fareTotal, taxes, addOns: 0, ...billingFields(body as unknown as Record<string, unknown>), totalAmount: grand,

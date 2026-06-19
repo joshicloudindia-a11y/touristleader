@@ -47,6 +47,7 @@ model Booking {
   bookingRef    String   @unique // internal reference (TL...)
   pnr           String?
   bookingType   String   @default("FLIGHT") // FLIGHT | HOTEL
+  source        String   @default("DEMO") // data/API origin: AMADEUS | BENZY | BDSD | DEMO
   status        String   @default("PENDING") // PENDING | CONFIRMED | CANCELLED | FAILED
   tripType      String   @default("ONE_WAY") // ONE_WAY | ROUND_TRIP | MULTI_CITY
   passengerType String   @default("REGULAR")
