@@ -22,6 +22,36 @@ model User {
   bookings     Booking[]
   travellers   TravellerProfile[]
   wallet       Wallet?
+  agentApplication AgentApplication?
+}
+
+// Self-service travel-agent registration → admin review → approve/reject lifecycle.
+model AgentApplication {
+  id         String    @id @default(cuid())
+  userId     String?   @unique
+  user       User?     @relation(fields: [userId], references: [id])
+  // details submitted at registration (all admin-editable)
+  fullName   String
+  agencyName String?
+  email      String
+  phone      String
+  city       String?
+  state      String?
+  address    String?
+  gstNumber  String?
+  panNumber  String?
+  experience String?
+  message    String?
+  documents  Json?     // [{ label, url }]
+  // review
+  status     String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  reviewNote String?   // rejection reason / admin note
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([status])
+  @@index([email])
 }
 
 // Saved passenger profiles for quick future bookings

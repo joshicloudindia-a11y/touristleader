@@ -162,6 +162,58 @@ async function deliver(opts: { to: string; subject: string; html: string; text?:
   }
 }
 
+// --- Travel-agent registration lifecycle ---------------------------------
+
+export async function sendAgentApplicationEmails(a: {
+  applicationId: string; name: string; email: string; phone: string; agencyName?: string; city?: string;
+}) {
+  const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
+  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">${brandBar()}
+    <h2 style="color:#0b63d6">New Agent Registration</h2>
+    <table style="font-size:14px">
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Name</td><td><b>${a.name}</b></td></tr>
+      ${a.agencyName ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">Agency</td><td>${a.agencyName}</td></tr>` : ""}
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Contact</td><td>${a.email} · ${a.phone}</td></tr>
+      ${a.city ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">City</td><td>${a.city}</td></tr>` : ""}
+    </table>
+    <p style="margin-top:12px;font-size:14px">Review the application & documents in Admin → Agent Applications.</p></div>`;
+
+  const inner = `
+    ${refBar("Application", a.applicationId.slice(-8).toUpperCase(), "Status", "Under review")}
+    <p style="margin:0 0 10px;color:#475569;font-size:14px">Hi ${a.name}, thanks for registering as a travel agent with Tourist Leader. We&apos;ve received your details and documents.</p>
+    ${sectionTitle("What happens next")}
+    <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">Our team will review your application and call you to discuss. Once approved, your agent panel is activated and you can start booking. We&apos;ll email you the moment there&apos;s an update.</p>`;
+
+  const r = await Promise.all([
+    deliver({ to: inbox, replyTo: a.email, subject: `New Agent Registration · ${a.name}`, html: team, transactional: true }),
+    deliver({ to: a.email, subject: "We've received your agent registration — Tourist Leader", html: emailShell({ title: "Registration Received", sub: "Your agent application is under review" }, inner), transactional: true }),
+  ]);
+  return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
+}
+
+export async function sendAgentApprovedEmail(a: { name: string; email: string; loginUrl: string }) {
+  const inner = `
+    ${refBar("Account", "Agent", "Status", "Approved")}
+    <p style="margin:0 0 10px;color:#475569;font-size:14px">Hi ${a.name}, great news — your travel-agent account has been <b style="color:#16a34a">approved</b> and your agent panel is now active.</p>
+    ${sectionTitle("Get started")}
+    <p style="margin:0 0 12px;color:#64748b;font-size:13px;line-height:1.7">Sign in with your email (one-time code, no password) and you&apos;ll land on your agent workspace — leads, bookings and support, all in one place.</p>
+    <p style="margin:0"><a href="${a.loginUrl}" style="display:inline-block;background:#0b63d6;color:#fff;text-decoration:none;font-weight:700;padding:11px 22px;border-radius:10px;font-size:14px">Open Agent Panel</a></p>`;
+  const r = await deliver({ to: a.email, subject: "Your Tourist Leader agent account is approved ✅", html: emailShell({ title: "Agent Account Approved", sub: "Your agent panel is now active" }, inner), transactional: true });
+  return "error" in r ? r : { ok: true };
+}
+
+export async function sendAgentRejectedEmail(a: { name: string; email: string; reason?: string; contactEmail: string; contactPhone: string }) {
+  const inner = `
+    ${refBar("Account", "Agent", "Status", "On hold")}
+    <p style="margin:0 0 10px;color:#475569;font-size:14px">Hi ${a.name}, thank you for your interest in becoming a Tourist Leader travel agent. After review, we&apos;re unable to approve your registration in its current form.</p>
+    ${a.reason ? `<p style="margin:0 0 12px;background:#fff7ed;border-left:3px solid #f59e0b;border-radius:8px;padding:12px 14px;color:#92400e;font-size:13px;line-height:1.6"><b>Reason:</b> ${a.reason}</p>` : ""}
+    ${sectionTitle("Let's sort it out")}
+    <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">Please contact the Tourist Leader team and we&apos;ll help you correct your details/documents — once everything is in order we can activate your agent panel.</p>
+    <p style="margin:10px 0 0;color:#0f172a;font-size:14px">📧 <a href="mailto:${a.contactEmail}" style="color:#0b63d6;text-decoration:none">${a.contactEmail}</a><br>📞 ${a.contactPhone}</p>`;
+  const r = await deliver({ to: a.email, subject: "Update on your Tourist Leader agent registration", html: emailShell({ title: "Registration Needs Attention", sub: "Please contact our team", icon: "&#33;", iconBg: "#fef3c7", iconColor: "#d97706" }, inner), transactional: true });
+  return "error" in r ? r : { ok: true };
+}
+
 export async function sendBookingEmail(opts: {
   to: string;
   bookingRef: string;

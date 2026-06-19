@@ -8,6 +8,7 @@ const COLS = [
   { key: "foot_company", links: [
     { label: "About Us", href: "/about" },
     { label: "Careers", href: "/careers" },
+    { label: "Become an Agent", href: "/agent/register" },
     { label: "Press", href: "/press" },
     { label: "Sustainability", href: "/sustainability" },
     { label: "Contact", href: "/contact" },

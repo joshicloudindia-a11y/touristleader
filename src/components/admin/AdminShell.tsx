@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { LayoutDashboard, Palmtree, Loader2, ShieldAlert, ExternalLink, LogOut, Mail, ArrowLeft, ShieldCheck, AlertCircle, Ticket, LifeBuoy, Users, ReceiptText, Menu, SlidersHorizontal, Wallet, Headset, FileText, Banknote, Store, Umbrella } from "lucide-react";
+import { LayoutDashboard, Palmtree, Loader2, ShieldAlert, ExternalLink, LogOut, Mail, ArrowLeft, ShieldCheck, AlertCircle, Ticket, LifeBuoy, Users, UserCheck, ReceiptText, Menu, SlidersHorizontal, Wallet, Headset, FileText, Banknote, Store, Umbrella } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { type Permission } from "@/lib/rbac";
@@ -23,6 +23,7 @@ const NAV: { seg: string; label: string; agentLabel?: string; icon: React.Elemen
   { seg: "insurance-enquiries", label: "Insurance Enquiries", icon: Umbrella, perm: "enquiries.view" },
   { seg: "tickets", label: "Support Tickets", icon: LifeBuoy, perm: "tickets.view" },
   { seg: "users", label: "Users", icon: Users, perm: "users.view" },
+  { seg: "agent-applications", label: "Agent Applications", icon: UserCheck, perm: "users.view" },
   { seg: "settlements", label: "Settlements", icon: Wallet, perm: "settlements.manage" },
   { seg: "roles", label: "Roles & Permissions", icon: ShieldCheck, perm: "roles.manage" },
   { seg: "settings", label: "Settings", icon: SlidersHorizontal, perm: "settings.manage" },
