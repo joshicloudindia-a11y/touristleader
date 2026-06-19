@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { AIRPORTS } from "./constants";
+import { LOGO_PNG_BASE64 } from "./logo-data";
 
 // Resolve to a *live* origin so the logo image actually loads in e-mail clients.
 // Prefer an explicit base URL, then the Vercel production/deploy URL, then the
@@ -10,14 +11,13 @@ const BASE = (
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
   "https://touristleader.vercel.app"
 ).replace(/\/$/, "");
-const LOGO = `${BASE}/logo.png`;
 
 /** Compact logo + brand header for the plain (non-shell) e-mails so every message is branded. */
 function brandBar() {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px"><tr>
     <td style="background:linear-gradient(135deg,#0a4fa8 0%,#0b63d6 55%,#38bdf8 100%);border-radius:12px;padding:13px 18px">
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-        <td style="vertical-align:middle"><img src="${LOGO}" alt="Tourist Leader" width="38" height="38" style="display:block;border-radius:50%;background:#fff;padding:3px"></td>
+        <td style="vertical-align:middle"><img src="cid:tllogo" alt="Tourist Leader" width="38" height="38" style="display:block;border-radius:50%;background:#fff;padding:3px"></td>
         <td style="vertical-align:middle;padding-left:10px">
           <div style="font-size:17px;font-weight:800;color:#fff;line-height:1">Tourist Leader</div>
           <div style="font-size:11px;color:rgba(255,255,255,.85);margin-top:3px">Comfort before, during, and after take off</div>
@@ -40,7 +40,7 @@ function emailShell(hero: { title: string; sub: string; icon?: string; iconBg?: 
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(2,6,23,.10)">
           <tr><td style="background:linear-gradient(135deg,#0a4fa8 0%,#0b63d6 55%,#38bdf8 100%);padding:22px 28px">
             <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-              <td style="vertical-align:middle"><img src="${LOGO}" alt="Tourist Leader" width="44" height="44" style="display:block;border-radius:50%;background:#fff;padding:3px"></td>
+              <td style="vertical-align:middle"><img src="cid:tllogo" alt="Tourist Leader" width="44" height="44" style="display:block;border-radius:50%;background:#fff;padding:3px"></td>
               <td style="vertical-align:middle;padding-left:12px">
                 <div style="font-size:20px;font-weight:800;color:#fff;line-height:1">Tourist Leader</div>
                 <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:4px">Comfort before, during, and after take off</div>
@@ -138,6 +138,11 @@ async function deliver(opts: { to: string; subject: string; html: string; text?:
     headers["List-Unsubscribe"] = `<mailto:${unsubMail}?subject=unsubscribe>, <${BASE}/help>`;
     headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
   }
+  // Embed the logo inline (CID) so it renders in every client regardless of host
+  // (localhost dev, Vercel, custom domain) — no dependency on a public image URL.
+  const attachments = opts.html.includes("cid:tllogo")
+    ? [{ filename: "logo.png", content: Buffer.from(LOGO_PNG_BASE64, "base64"), cid: "tllogo", contentType: "image/png", contentDisposition: "inline" as const }]
+    : undefined;
   try {
     const info = await getTransporter().sendMail({
       from: MAIL_FROM,
@@ -148,6 +153,7 @@ async function deliver(opts: { to: string; subject: string; html: string; text?:
       text: opts.text || htmlToText(opts.html),
       html: opts.html,
       headers,
+      attachments,
     });
     return { messageId: info.messageId } as const;
   } catch (err) {
@@ -174,7 +180,7 @@ export async function sendOtpEmail(to: string, otp: string) {
   const html = `<!doctype html><html><body style="font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;padding:24px">
     <div style="max-width:440px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
       <div style="background:linear-gradient(135deg,#0a4fa8,#0b63d6);padding:22px;color:#fff;text-align:center">
-        <img src="${LOGO}" alt="Tourist Leader" width="46" height="46" style="display:inline-block;border-radius:50%;background:#fff;padding:3px">
+        <img src="cid:tllogo" alt="Tourist Leader" width="46" height="46" style="display:inline-block;border-radius:50%;background:#fff;padding:3px">
         <h1 style="margin:10px 0 0;font-size:19px">Tourist Leader</h1>
         <p style="margin:6px 0 0;opacity:.9;font-size:13px">Comfort before, during, and after take off</p>
       </div>
@@ -210,7 +216,7 @@ export async function sendSupportTicketEmails(t: {
   const userHtml = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
     <div style="background:linear-gradient(135deg,#0a4fa8,#0b63d6);padding:20px;color:#fff">
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-        <td style="vertical-align:middle"><img src="${LOGO}" alt="Tourist Leader" width="38" height="38" style="display:block;border-radius:50%;background:#fff;padding:3px"></td>
+        <td style="vertical-align:middle"><img src="cid:tllogo" alt="Tourist Leader" width="38" height="38" style="display:block;border-radius:50%;background:#fff;padding:3px"></td>
         <td style="vertical-align:middle;padding-left:10px">
           <h2 style="margin:0;font-size:18px">We've received your request</h2>
           <p style="margin:5px 0 0;opacity:.9;font-size:13px">Comfort before, during, and after take off</p>
