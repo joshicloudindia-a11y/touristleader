@@ -18,7 +18,7 @@ export default async function PackageDetailPage({ params }: { params: Promise<{ 
   return (
     <>
       <Header active="holidays" />
-      <main className="flex-1 bg-slate-100">
+      <main className="flex-1 bg-background">
         {/* Hero */}
         <div className="relative h-64 sm:h-80">
           <Image src={pkg.image} alt={pkg.destination} fill priority sizes="100vw" className="object-cover" />

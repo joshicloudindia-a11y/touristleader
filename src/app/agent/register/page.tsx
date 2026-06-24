@@ -45,7 +45,7 @@ export default function AgentRegisterPage() {
   return (
     <>
       <Header />
-      <main className="flex-1 bg-slate-100">
+      <main className="flex-1 bg-background">
         <section className="bg-gradient-to-br from-brand-dark to-brand py-12 text-center text-white">
           <Headset size={42} className="mx-auto" />
           <h1 className="mt-3 text-2xl font-extrabold sm:text-3xl">Become a Tourist Leader Agent</h1>

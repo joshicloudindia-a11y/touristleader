@@ -7,7 +7,7 @@ export default function SearchPage() {
   return (
     <>
       <Header active="flights" />
-      <main className="flex-1 bg-slate-100">
+      <main className="flex-1 bg-background">
         <Suspense fallback={<div className="mx-auto max-w-7xl px-4 py-10 text-center text-slate-400">Loading flights…</div>}>
           <SearchResults />
         </Suspense>

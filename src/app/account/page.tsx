@@ -16,7 +16,7 @@ export default function AccountPage() {
   return (
     <>
       <Header active="flights" />
-      <main className="flex-1 bg-slate-100">
+      <main className="flex-1 bg-background">
         <div className="mx-auto max-w-2xl px-4 py-8">
           <h1 className="flex items-center gap-2 text-2xl font-extrabold text-slate-900"><UserCircle size={24} className="text-brand" /> My Account</h1>
 

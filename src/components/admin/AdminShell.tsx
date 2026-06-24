@@ -140,7 +140,7 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
             })}
           </div>
         </div>
-        <main className="flex-1 bg-slate-100">
+        <main className="flex-1 bg-background">
           <div className="mx-auto max-w-7xl px-4 py-6">{children}</div>
         </main>
         <Footer />

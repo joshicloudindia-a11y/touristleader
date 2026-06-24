@@ -57,7 +57,7 @@ export default function CustomerWalletPage() {
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <Header active="flights" />
-      <main className="flex-1 bg-slate-100">
+      <main className="flex-1 bg-background">
         <div className="mx-auto max-w-5xl px-4 py-8">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h1 className="flex items-center gap-2 text-2xl font-extrabold text-slate-900"><Wallet size={24} className="text-brand" /> My Wallet</h1>

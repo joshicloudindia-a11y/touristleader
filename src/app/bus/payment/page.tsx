@@ -77,7 +77,7 @@ export default function BusPaymentPage() {
     <>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
       <Header active="bus" />
-      <main className="flex-1 bg-slate-100">
+      <main className="flex-1 bg-background">
         <div className="mx-auto max-w-6xl px-4 py-6">
           <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
             <div className="space-y-4">

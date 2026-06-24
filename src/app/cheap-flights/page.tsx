@@ -25,7 +25,7 @@ export default function CheapFlightsPage() {
   return (
     <>
       <Header active="flights" />
-      <main className="flex-1 bg-slate-100">
+      <main className="flex-1 bg-background">
         <section className="bg-gradient-to-br from-brand-dark to-brand py-14 text-center text-white">
           <Plane size={44} className="mx-auto" />
           <h1 className="mt-3 text-3xl font-extrabold sm:text-4xl">Cheap Flights</h1>

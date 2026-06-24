@@ -44,7 +44,7 @@ export default function HotelGuestPage() {
   return (
     <>
       <Header active="hotels" />
-      <main className="flex-1 bg-slate-100">
+      <main className="flex-1 bg-background">
         <div className="mx-auto max-w-6xl px-4 py-6">
           <h1 className="mb-4 text-xl font-extrabold text-slate-900">Guest details</h1>
           <div className="grid gap-5 lg:grid-cols-[1fr_340px]">

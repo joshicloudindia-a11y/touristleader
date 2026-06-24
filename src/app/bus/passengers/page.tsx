@@ -46,7 +46,7 @@ export default function BusPassengersPage() {
   return (
     <>
       <Header active="bus" />
-      <main className="flex-1 bg-slate-100">
+      <main className="flex-1 bg-background">
         <div className="mx-auto max-w-6xl px-4 py-6">
           <div className="mb-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
             <p className="font-bold text-slate-900">{bus.operator} <span className="text-xs font-normal text-slate-400">· {bus.busType}</span></p>

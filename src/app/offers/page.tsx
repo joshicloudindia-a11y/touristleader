@@ -40,7 +40,7 @@ export default function OffersPage() {
   return (
     <>
       <Header active="offers" />
-      <main className="flex-1 bg-slate-100">
+      <main className="flex-1 bg-background">
         {/* Hero */}
         <section className="bg-gradient-to-br from-brand-dark to-brand py-12 text-center text-white">
           <Sparkles size={40} className="mx-auto" />

@@ -21,7 +21,7 @@ function Confirmation() {
   if (!mounted) return null;
 
   return (
-    <main className="flex-1 bg-slate-100">
+    <main className="flex-1 bg-background">
       <div className="bg-gradient-to-b from-emerald-500 to-emerald-600 py-10 text-center text-white">
         <CheckCircle2 size={56} className="mx-auto animate-fade-up" />
         <h1 className="mt-3 text-2xl font-extrabold sm:text-3xl">Stay Booked!</h1>
