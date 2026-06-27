@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/InfoPopup";
 import { PriceSummary } from "@/components/booking/PriceSummary";
 import { useBooking, type PassengerInput } from "@/store/booking";
-import { paxTypes, isDomesticRoute } from "@/lib/fare-rules";
+import { paxTypes, isDomesticRoute, dobErrorForType, TYPE_AGE_LABEL } from "@/lib/fare-rules";
 import { cn } from "@/lib/utils";
 
 const ID_TYPES = ["Aadhaar", "PAN", "Passport", "Driving Licence"];
@@ -77,6 +77,14 @@ export default function PassengersPage() {
   // Per-passenger type labels (Adult / Child / Infant) + domestic ID exemption.
   const types = paxTypes(query.travellers);
   const domestic = isDomesticRoute(query.from, query.to);
+  const travelISO = query.departDate || new Date().toISOString().slice(0, 10);
+
+  // DOB must match the passenger's age band (Infant 0–2, Child 2–18, Adult 18+) on the travel date.
+  const dobErr = (dob: string, i: number) => dobErrorForType(dob, types[i] || "Adult", travelISO);
+  const clearDobIfValid = (i: number, value: string) =>
+    setErrors((e) => (e[`p${i}_dob`] && !dobErr(value, i) ? { ...e, [`p${i}_dob`]: "" } : e));
+  const blurDob = (i: number, value: string) =>
+    setErrors((e) => ({ ...e, [`p${i}_dob`]: dobErr(value, i) }));
 
   const update = (i: number, patch: Partial<PassengerInput>) =>
     setPax((p) => p.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
@@ -95,7 +103,7 @@ export default function PassengersPage() {
     set("phone", phone);
     pax.forEach((p, i) => {
       set(`p${i}_fullName`, p.fullName);
-      set(`p${i}_dob`, p.dob);
+      const dm = dobErr(p.dob, i); if (dm) e[`p${i}_dob`] = dm; // age band per passenger type
       if (!domestic) set(`p${i}_idNumber`, p.idNumber); // ID not required for domestic travel
     });
     return e;
@@ -153,7 +161,7 @@ export default function PassengersPage() {
                 const k = (f: string) => `p${i}_${f}`;
                 return (
                   <div key={i} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-                    <h2 className="mb-3 flex items-center gap-2 font-bold text-slate-900"><User size={18} className="text-brand" /> Passenger {i + 1} <span className="text-xs font-normal text-slate-400">({types[i] || "Adult"})</span></h2>
+                    <h2 className="mb-3 flex items-center gap-2 font-bold text-slate-900"><User size={18} className="text-brand" /> Passenger {i + 1} <span className="text-xs font-normal text-slate-400">({types[i] || "Adult"} · {TYPE_AGE_LABEL[types[i] || "Adult"]})</span></h2>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Field label={<Tooltip text="Enter the exact name on your government ID. Mismatched names may lead to boarding denial."><span className="border-b border-dashed border-slate-300">Full Name (as per ID)</span></Tooltip>} error={errors[k("fullName")]} htmlFor={`fld-${k("fullName")}`}>
                         <Input id={`fld-${k("fullName")}`} value={p.fullName} error={errors[k("fullName")]} placeholder="e.g. Rahul Sharma"
@@ -162,8 +170,8 @@ export default function PassengersPage() {
                       </Field>
                       <Field label={<Tooltip text="Required for infant, child, student, senior, and special fares."><span className="border-b border-dashed border-slate-300">Date of Birth</span></Tooltip>} error={errors[k("dob")]} htmlFor={`fld-${k("dob")}`}>
                         <Input id={`fld-${k("dob")}`} type="date" value={p.dob} error={errors[k("dob")]} max={new Date().toISOString().slice(0, 10)}
-                          onChange={(e) => { update(i, { dob: e.target.value }); clearIfValid(k("dob"), e.target.value); }}
-                          onBlur={(e) => blurValidate(k("dob"), e.target.value)} />
+                          onChange={(e) => { update(i, { dob: e.target.value }); clearDobIfValid(i, e.target.value); }}
+                          onBlur={(e) => blurDob(i, e.target.value)} />
                       </Field>
                       <Field label="Gender">
                         <select value={p.gender} onChange={(e) => update(i, { gender: e.target.value })} className="inp">

@@ -23,6 +23,38 @@ export function seatablePax(t: TravellerCount): number {
   return Math.max(1, t.adults + t.children);
 }
 
+/** Whole years between a date of birth and a reference date. */
+export function ageOnDate(dobISO: string, onISO: string): number {
+  const b = new Date(dobISO);
+  const d = new Date(onISO);
+  let age = d.getFullYear() - b.getFullYear();
+  const m = d.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && d.getDate() < b.getDate())) age--;
+  return age;
+}
+
+/** Human age band for each passenger type (shown next to the form heading). */
+export const TYPE_AGE_LABEL: Record<PaxType, string> = {
+  Adult: "18+ yrs",
+  Child: "2–18 yrs",
+  Infant: "under 2 yrs",
+};
+
+/**
+ * Validate a date of birth against its passenger type's age band, measured on the
+ * travel date: Infant 0–2, Child 2–18, Adult 18+. Returns "" when valid.
+ */
+export function dobErrorForType(dobISO: string, type: PaxType, travelISO: string): string {
+  if (!dobISO) return "Date of birth is required";
+  if (new Date(dobISO) > new Date()) return "Date can't be in the future";
+  const age = ageOnDate(dobISO, travelISO);
+  if (age < 0) return "Enter a valid date of birth";
+  if (type === "Infant" && age >= 2) return "Infant must be under 2 years on the travel date";
+  if (type === "Child" && (age < 2 || age >= 18)) return "Child must be 2–18 years on the travel date";
+  if (type === "Adult" && age < 18) return "Adult must be 18 years or older on the travel date";
+  return "";
+}
+
 /**
  * Effective seat charge after fare inclusions:
  *  - Your Choice → any seat free (free preferred seat)
