@@ -10,7 +10,7 @@ import { AirlineLogo } from "@/components/AirlineLogo";
 import { useAuth } from "@/store/auth";
 import { formatINR, formatDate, formatTime, formatDuration, cn } from "@/lib/utils";
 import { AIRPORTS } from "@/lib/constants";
-import { buildInvoiceHtml, openInvoice, shareBooking, type InvoiceData } from "@/lib/invoice";
+import { buildInvoiceHtml, buildInvoiceDataFromBooking, openInvoice, shareBooking, type BillTo } from "@/lib/invoice";
 
 type Kind = "FLIGHT" | "BUS" | "HOTEL";
 interface Pax { fullName?: string; idType?: string; idNumber?: string; gender?: string; seatId?: string; age?: string }
@@ -28,7 +28,10 @@ interface Booking {
   contactEmail: string; contactPhone: string; paymentId: string | null; createdAt: string;
   passengers?: Pax[] | null;
   flightData?: FData | null;
+  billTo?: BillTo;
 }
+interface Enquiry { id: string; kind: "PACKAGE" | "FOREX" | "VISA" | "INSURANCE"; enquiryNo: string; title: string; status: string; createdAt: string }
+const ENQUIRY_LABEL: Record<string, string> = { PACKAGE: "Holiday", FOREX: "Forex", VISA: "Visa", INSURANCE: "Insurance" };
 
 const FARE_LABELS: Record<string, string> = { FEE_SAVER: "Fee Saver", REGULAR: "Regular", COMFORT: "Comfort", YOUR_CHOICE: "Your Choice" };
 const KIND_LABEL: Record<Kind, string> = { FLIGHT: "Flight", BUS: "Bus", HOTEL: "Hotel" };
@@ -39,6 +42,7 @@ export default function MyTripsPage() {
   const router = useRouter();
   const { user, fetched, fetchMe } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Booking | null>(null);
   const [toast, setToast] = useState("");
@@ -48,6 +52,7 @@ export default function MyTripsPage() {
     if (!fetched) return;
     if (!user) { setLoading(false); return; }
     fetch("/api/bookings", { cache: "no-store" }).then((r) => r.json()).then((d) => setBookings(d.bookings || [])).finally(() => setLoading(false));
+    fetch("/api/account/enquiries", { cache: "no-store" }).then((r) => r.json()).then((d) => setEnquiries(d.enquiries || [])).catch(() => {});
   }, [fetched, user]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(""), 2500); return () => clearTimeout(t); }, [toast]);
 
@@ -69,44 +74,7 @@ export default function MyTripsPage() {
   const routeLabel = (b: Booking) => kindOf(b) === "HOTEL" ? (b.flightData?.name || b.cabinClass) : `${city(b.origin)} → ${city(b.destination)}`;
 
   const invoice = (b: Booking) => {
-    const m = fareMath(b); const f = b.flightData || {}; const kind = m.kind;
-    let detailsTitle = "Flight Details"; let detailLines: string[] = [];
-    if (kind === "BUS") {
-      detailsTitle = "Bus Details";
-      detailLines = [
-        `<b>${f.operator || "-"}</b>`,
-        `${f.busType || b.cabinClass}`,
-        `${city(b.origin)} &rarr; ${city(b.destination)}`,
-        `${formatDate(b.departDate)}${f.departTime ? ` &middot; ${formatTime(f.departTime)}` : ""}`,
-        `Seats: ${(f.seatIds || []).join(", ") || "-"} &middot; ${m.pax} passenger${m.pax > 1 ? "s" : ""}`,
-        `Boarding: ${f.boarding?.name || "-"}${f.boarding?.time ? ` (${f.boarding.time})` : ""}`,
-      ];
-    } else if (kind === "HOTEL") {
-      detailsTitle = "Stay Details";
-      detailLines = [
-        `<b>${f.name || "-"}</b>`,
-        `${f.area ? `${f.area}, ` : ""}${f.city || ""}`,
-        `${f.roomName || b.cabinClass} &middot; ${f.nights || 1} night${(f.nights || 1) > 1 ? "s" : ""}`,
-        `${f.checkIn || formatDate(b.departDate)} &rarr; ${f.checkOut || ""}`,
-        `${f.rooms || 1} room${(f.rooms || 1) > 1 ? "s" : ""} &middot; ${m.pax} guest${m.pax > 1 ? "s" : ""}`,
-      ];
-    } else {
-      detailLines = [
-        `<b>${f.airlineName || "-"} ${f.flightNumber || ""}</b>`,
-        `${city(b.origin)} (${b.origin}) &rarr; ${city(b.destination)} (${b.destination})`,
-        `${formatDate(b.departDate)}${f.departTime ? ` &middot; ${formatTime(f.departTime)}` : ""}`,
-        `${b.cabinClass} &middot; ${FARE_LABELS[b.fareType] || b.fareType} &middot; ${m.pax} traveller${m.pax > 1 ? "s" : ""}`,
-      ];
-    }
-    const data: InvoiceData = {
-      ref: b.bookingRef, pnr: b.pnr || "—", kind, detailsTitle, detailLines,
-      name: b.passengers?.[0]?.fullName || "Guest", email: b.contactEmail, phone: b.contactPhone,
-      dateLabel: formatDate(b.departDate), pax: m.pax,
-      base: m.base, taxes: m.taxes, addOns: m.addOns, convenience: m.convenience, total: m.total,
-      serviceCharge: m.serviceCharge, igst: m.igst, cgst: m.cgst, sgst: m.sgst,
-      invDate: formatDate(b.createdAt),
-    };
-    openInvoice(buildInvoiceHtml(data, window.location.origin), b.bookingRef);
+    openInvoice(buildInvoiceHtml(buildInvoiceDataFromBooking(b), window.location.origin), b.bookingRef);
   };
 
   const share = (b: Booking) => {
@@ -140,14 +108,18 @@ export default function MyTripsPage() {
       <Header active="flights" />
       <main className="flex-1 bg-background">
         <div className="mx-auto max-w-4xl px-4 py-8">
-          <h1 className="flex items-center gap-2 text-2xl font-extrabold text-slate-900"><Ticket size={24} className="text-brand" /> My Trips</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold text-slate-900"><Ticket size={24} className="text-brand" /> My Dashboard</h1>
           {loading ? (
             <div className="mt-10 flex justify-center text-slate-400"><Loader2 className="animate-spin" /></div>
           ) : !user ? (
-            <Empty title="Please log in to see your trips" sub="Your bookings are linked to your account." cta="Go to Home" onClick={() => router.push("/")} />
-          ) : bookings.length === 0 ? (
-            <Empty title="No trips yet" sub="Your confirmed bookings will appear here." cta="Start booking" onClick={() => router.push("/")} />
+            <Empty title="Please log in to see your dashboard" sub="Your bookings & enquiries are linked to your account." cta="Go to Home" onClick={() => router.push("/")} />
+          ) : bookings.length === 0 && enquiries.length === 0 ? (
+            <Empty title="Nothing here yet" sub="Your confirmed bookings and enquiries will appear here." cta="Start booking" onClick={() => router.push("/")} />
           ) : (
+            <>
+            {bookings.length === 0 ? (
+              <p className="mt-5 rounded-2xl bg-white p-5 text-center text-sm text-slate-400 shadow-sm ring-1 ring-slate-100">No bookings yet — your confirmed trips will appear here.</p>
+            ) : (
             <div className="mt-5 space-y-3">
               {bookings.map((b) => {
                 const k = kindOf(b);
@@ -174,6 +146,29 @@ export default function MyTripsPage() {
                 );
               })}
             </div>
+            )}
+
+            {enquiries.length > 0 && (
+              <div className="mt-8">
+                <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900"><FileText size={20} className="text-brand" /> My Enquiries</h2>
+                <div className="mt-3 space-y-2">
+                  {enquiries.map((e) => (
+                    <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-bold text-brand">{ENQUIRY_LABEL[e.kind]}</span>
+                        <span className="font-semibold text-slate-800">{e.title}</span>
+                        <span className="hidden text-xs text-slate-400 sm:inline">{e.enquiryNo}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 font-bold text-slate-600">{e.status}</span>
+                        <span className="text-slate-400">{formatDate(e.createdAt)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       </main>

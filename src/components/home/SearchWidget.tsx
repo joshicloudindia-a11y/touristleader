@@ -41,6 +41,7 @@ export function SearchWidget() {
   const [to, setTo] = useState("BOM");
   const [departDate, setDepartDate] = useState(tomorrow(3));
   const [returnDate, setReturnDate] = useState("");
+  const [returnError, setReturnError] = useState(false);
   const [cabinClass, setCabinClass] = useState<CabinClass>("Economy");
   const [travellers, setTravellers] = useState<TravellerCount>({ adults: 1, children: 0, infants: 0 });
   // Advanced search + popular filter
@@ -67,6 +68,11 @@ export function SearchWidget() {
   const removeLeg = (i: number) => setLegs((ls) => (ls.length <= 2 ? ls : ls.filter((_, idx) => idx !== i)));
 
   const search = () => {
+    // Round trip needs a return date — otherwise we'd silently return one-way results.
+    if (roundTrip && !returnDate) {
+      setReturnError(true);
+      return;
+    }
     const params = new URLSearchParams({ tripType, cabinClass, passengerType });
 
     if (multiCity) {
@@ -108,7 +114,7 @@ export function SearchWidget() {
             return (
               <div key={t.id} className="flex items-center">
                 <button
-                  onClick={() => setTripType(t.id as TripType)}
+                  onClick={() => { setTripType(t.id as TripType); setReturnError(false); }}
                   className={cn("flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors", tripType === t.id ? "text-brand" : "text-slate-600 hover:bg-slate-100")}
                 >
                   <span className={cn("grid h-4 w-4 place-items-center rounded-full border-2", tripType === t.id ? "border-brand" : "border-slate-300")}>
@@ -167,7 +173,7 @@ export function SearchWidget() {
             <div className="border-b border-slate-200 sm:border-r sm:border-b-0 md:col-span-2 md:border-b-0">
               <DateField label={tx("f_departure")} value={departDate} min={tomorrow(0)} onChange={setDepartDate} mode="depart" rangeOther={returnDate} showFares from={from} to={to} align="left" />
             </div>
-            <div className="border-b border-slate-200 sm:border-b-0 md:col-span-2">
+            <div className={cn("border-b border-slate-200 sm:border-b-0 md:col-span-2", returnError && "rounded-lg ring-1 ring-rose-300")}>
               <DateField
                 label={tx("f_return")}
                 value={returnDate}
@@ -179,9 +185,10 @@ export function SearchWidget() {
                 from={from}
                 to={to}
                 align="right"
-                onActivate={() => { if (!roundTrip && !group) { setTripType("ROUND_TRIP"); if (!returnDate) setReturnDate(tomorrow(7)); } }}
-                onChange={(v) => { setReturnDate(v); if (v && !group) setTripType("ROUND_TRIP"); }}
+                onActivate={() => { setReturnError(false); if (!roundTrip && !group) { setTripType("ROUND_TRIP"); if (!returnDate) setReturnDate(tomorrow(7)); } }}
+                onChange={(v) => { setReturnDate(v); setReturnError(false); if (v && !group) setTripType("ROUND_TRIP"); }}
               />
+              {returnError && <p className="px-3 pb-1.5 text-[11px] font-semibold text-rose-500">Please pick a return date for a round trip.</p>}
             </div>
             <div className="sm:col-span-2 sm:border-t sm:border-slate-200 md:col-span-3 md:border-t-0">
               <TravellerSelect travellers={travellers} cabinClass={cabinClass} onChange={(t, c) => { setTravellers(t); setCabinClass(c); }} />

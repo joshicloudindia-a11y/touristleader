@@ -9,6 +9,7 @@ import { InfoPopup } from "@/components/ui/InfoPopup";
 import { PriceSummary } from "@/components/booking/PriceSummary";
 import { useBooking } from "@/store/booking";
 import { MEALS } from "@/lib/constants";
+import { mealCharge, seatCharge, seatablePax } from "@/lib/fare-rules";
 import { cn, formatINR } from "@/lib/utils";
 
 const ICONS: Record<string, React.ElementType> = { veg: Salad, nonveg: Drumstick, dryfruits: Nut, fruits: Apple, special: Soup };
@@ -28,21 +29,27 @@ export default function MealsPage() {
   const [pax, setPax] = useState<string[]>([]);
   const [active, setActive] = useState(0);
   const [meals, setMeals] = useState<Record<number, string>>({});
-  const { setMeal } = useBooking();
+  const { setMeal, fare } = useBooking();
 
   useEffect(() => {
     setMounted(true);
     const st = useBooking.getState();
     if (!st.flight || !st.query) { router.replace("/"); return; }
-    setPax(st.passengers.length ? st.passengers.map((p) => p.fullName || "Passenger") : ["Passenger"]);
+    // Infants travel on lap — only adults + children pick a meal.
+    const seatable = seatablePax(st.query.travellers);
+    setPax(st.passengers.length ? st.passengers.slice(0, seatable).map((p) => p.fullName || "Passenger") : ["Passenger"]);
     setMeals(st.meals);
   }, [router]);
 
   if (!mounted) return null;
 
   const recalc = (m: Record<number, string>) => {
-    const mealTotal = Object.values(m).reduce((acc, mid) => acc + (MEALS.find((x) => x.id === mid)?.price || 0), 0);
-    const seatTotal = Object.values(useBooking.getState().seats).reduce((acc, id) => acc + seatPrice(id), 0);
+    const fareId = useBooking.getState().fare?.id;
+    const mealTotal = Object.values(m).reduce((acc, mid) => {
+      const meal = MEALS.find((x) => x.id === mid);
+      return acc + (meal ? mealCharge(fareId, meal.id, meal.price) : 0); // inclusive fares = free meal
+    }, 0);
+    const seatTotal = Object.values(useBooking.getState().seats).reduce((acc, id) => acc + seatCharge(fareId, seatPrice(id)), 0);
     useBooking.setState({ addOns: seatTotal + mealTotal });
   };
 
@@ -82,7 +89,7 @@ export default function MealsPage() {
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="flex items-center gap-1.5 font-semibold text-slate-800">{m.label}<InfoPopup title={m.label}><p className="text-sm text-slate-700">{m.info}</p></InfoPopup></p>
-                        <p className="text-sm font-bold text-brand">{formatINR(m.price)}</p>
+                        <p className="text-sm font-bold text-brand">{mealCharge(fare?.id, m.id, m.price) === 0 ? "Included free" : formatINR(m.price)}</p>
                       </div>
                       <Button size="sm" variant={selected ? "primary" : "outline"} onClick={() => pick(m.id)}>
                         {selected ? <><Check size={14} /> Added</> : "Add"}

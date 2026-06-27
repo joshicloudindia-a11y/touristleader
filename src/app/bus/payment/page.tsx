@@ -90,7 +90,7 @@ export default function BusPaymentPage() {
               <WalletPayToggle total={grandTotal} value={useWallet} onChange={setUseWallet} />
               <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
                 <div className="flex items-center gap-1.5 text-xs text-emerald-600"><Lock size={13} /> 100% secure · Payments by <b className="text-[#072654]">Razorpay</b></div>
-                <p className="mt-2 rounded-lg bg-sky-50 px-3 py-2 text-[11px] text-sky-700"><b>Test mode:</b> pay via UPI <b>success@razorpay</b>, then choose Success on the test screen.</p>
+                {process.env.NEXT_PUBLIC_SHOW_TEST_HINTS === "1" && <p className="mt-2 rounded-lg bg-sky-50 px-3 py-2 text-[11px] text-sky-700"><b>Test mode:</b> pay via UPI <b>success@razorpay</b>, then choose Success on the test screen.</p>}
               </div>
             </div>
             <div className="lg:sticky lg:top-20 lg:self-start">

@@ -11,6 +11,7 @@ import { PriceSummary } from "@/components/booking/PriceSummary";
 import { useBooking } from "@/store/booking";
 import { useAuth } from "@/store/auth";
 import { useBilling } from "@/lib/useBilling";
+import { promoDiscount } from "@/lib/offers";
 import { WalletPayToggle } from "@/components/billing/WalletPayToggle";
 import { cn, formatINR } from "@/lib/utils";
 
@@ -31,6 +32,9 @@ export default function PaymentPage() {
   const router = useRouter();
   const { quote } = useBilling();
   const customerState = useBooking((s) => s.customerState);
+  const agentMarkup = useBooking((s) => s.agentMarkup);
+  const setAgentMarkup = useBooking((s) => s.setAgentMarkup);
+  const tier = useAuth((s) => s.tier);
   const [mounted, setMounted] = useState(false);
   const [method, setMethod] = useState("upi");
   const [processing, setProcessing] = useState(false);
@@ -44,9 +48,11 @@ export default function PaymentPage() {
 
   if (!mounted) return null;
 
-  const subtotal = useBooking.getState().totalAmount() + 299;
+  const discountable = useBooking.getState().totalAmount(); // fare × pax + add-ons
+  const discount = promoDiscount(useBooking.getState().promoCode, discountable);
+  const subtotal = discountable + 299 - discount;
   const q = quote(subtotal, customerState);
-  const grandTotal = subtotal + q.addon;
+  const grandTotal = subtotal + q.addon + agentMarkup; // agent's own service charge (0 for customers)
 
   type RzpFields = { razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string };
 
@@ -59,7 +65,7 @@ export default function PaymentPage() {
         body: JSON.stringify({
           flight: st.flight, fare: st.fare, query: st.query, passengers: st.passengers,
           seats: st.seats, meals: st.meals, contactEmail: st.contactEmail, contactPhone: st.contactPhone,
-          addOns: st.addOns, total,
+          addOns: st.addOns, total, agentMarkup,
           customerState, serviceCharge: q.serviceCharge, gst: q.gst,
           ...(useWallet ? { paymentSource: "wallet" } : {}),
           ...rzp,
@@ -210,15 +216,27 @@ export default function PaymentPage() {
                   <span className="text-slate-300">·</span>
                   <span className="text-slate-500">Payments processed securely by <b className="text-[#072654]">Razorpay</b></span>
                 </div>
-                <div className="mt-2 rounded-lg bg-sky-50 px-3 py-2 text-[11px] text-sky-700">
-                  <p className="font-bold">Test mode — how to complete payment:</p>
-                  <p className="mt-0.5">The checkout opens on <b>UPI</b>. Enter any UPI ID (e.g. <b>success@razorpay</b>) → tap pay → on the test screen choose <b>Success</b>.</p>
-                  <p className="mt-0.5 text-sky-600">Avoid <b>Cards</b> — test mode rejects international cards like 4111… (use domestic <b>5267 3181 8797 5449</b> if you must).</p>
-                </div>
+                {process.env.NEXT_PUBLIC_SHOW_TEST_HINTS === "1" && (
+                  <div className="mt-2 rounded-lg bg-sky-50 px-3 py-2 text-[11px] text-sky-700">
+                    <p className="font-bold">Test mode — how to complete payment:</p>
+                    <p className="mt-0.5">The checkout opens on <b>UPI</b>. Enter any UPI ID (e.g. <b>success@razorpay</b>) → tap pay → on the test screen choose <b>Success</b>.</p>
+                    <p className="mt-0.5 text-sky-600">Avoid <b>Cards</b> — test mode rejects international cards like 4111… (use domestic <b>5267 3181 8797 5449</b> if you must).</p>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="lg:sticky lg:top-20 lg:self-start">
+              {tier === "agent" && (
+                <div className="mb-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                  <label className="block text-sm font-bold text-slate-900">Your service charge</label>
+                  <p className="mt-0.5 text-xs text-slate-400">Added to the customer&apos;s total &amp; credited to your wallet (settled by admin).</p>
+                  <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-200 px-3 focus-within:border-brand">
+                    <span className="text-slate-400">₹</span>
+                    <input type="number" min={0} value={agentMarkup || ""} onChange={(e) => setAgentMarkup(Math.max(0, Math.round(Number(e.target.value) || 0)))} placeholder="0" className="w-full bg-transparent py-2.5 text-sm outline-none" />
+                  </div>
+                </div>
+              )}
               <PriceSummary cta={
                 <Button className="w-full" onClick={pay} disabled={processing || !customerState}>
                   {processing ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : <><Lock size={15} /> Pay {formatINR(grandTotal)}</>}

@@ -41,7 +41,11 @@ export async function walletTxn(opts: {
   const amount = Math.round(opts.amount);
   if (amount <= 0) return null;
   const wallet = await ensureWallet(opts.userId);
-  const delta = opts.type === "CREDIT" ? amount : -amount;
+  // PENDING credits (e.g. agent commission awaiting settlement) are recorded but
+  // are NOT spendable — they must not inflate the wallet balance. They show as
+  // "on hold" until an admin settles them.
+  const isPending = (opts.status || "COMPLETED") === "PENDING";
+  const delta = isPending ? 0 : opts.type === "CREDIT" ? amount : -amount;
   const newBalance = wallet.balance + delta;
   if (newBalance < 0) return null; // insufficient funds
 

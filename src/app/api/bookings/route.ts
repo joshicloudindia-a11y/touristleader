@@ -6,6 +6,7 @@ import { verifyPaymentSignature } from "@/lib/razorpay";
 import { getSessionUser, isAdmin } from "@/lib/auth";
 import { getBillingConfig, walletTxn } from "@/lib/billing";
 import { computeCommission } from "@/lib/billing-core";
+import { attachBillTo } from "@/lib/invoice-billing";
 
 export const dynamic = "force-dynamic";
 
@@ -22,17 +23,26 @@ function flightSource(flight: { id?: string } | null | undefined): string {
 const hotelSource = () => (process.env.BENZY_LIVE === "1" ? "BENZY" : "DEMO");
 const busSource = () => (process.env.BUS_LIVE === "1" ? "BDSD" : "DEMO");
 
-/** If the booker is an agent, credit their commission (+GST) to their wallet as PENDING. */
-async function attributeAgentCommission(bookingRef: string, bookingTotal: number) {
+/**
+ * If the booker is an agent, attribute the booking and credit their earnings to
+ * their wallet as PENDING (settled by an admin): platform commission (+GST) plus
+ * any service charge (markup) the agent added at checkout. Commission is computed
+ * on the fare total excluding the agent's own markup.
+ */
+async function attributeAgentCommission(bookingRef: string, bookingTotal: number, agentMarkup = 0) {
   try {
     const { tier, user } = await isAdmin();
     if (tier !== "agent" || !user) return;
     const cfg = await getBillingConfig();
     const dbu = await prisma.user.findUnique({ where: { id: user.id }, select: { state: true } });
-    const { commission, gst, credit } = computeCommission(bookingTotal, dbu?.state, cfg);
-    if (credit <= 0) return;
+    const { commission, gst, credit } = computeCommission(Math.max(0, bookingTotal - agentMarkup), dbu?.state, cfg);
     await prisma.booking.updateMany({ where: { bookingRef }, data: { bookedByAgentId: user.id, commission, commissionGst: gst.total } });
-    await walletTxn({ userId: user.id, type: "CREDIT", amount: credit, reason: "COMMISSION", status: "PENDING", refType: "BOOKING", refId: bookingRef, note: `Commission · ${bookingRef}` });
+    if (credit > 0) {
+      await walletTxn({ userId: user.id, type: "CREDIT", amount: credit, reason: "COMMISSION", status: "PENDING", refType: "BOOKING", refId: bookingRef, note: `Commission · ${bookingRef}` });
+    }
+    if (agentMarkup > 0) {
+      await walletTxn({ userId: user.id, type: "CREDIT", amount: agentMarkup, reason: "COMMISSION", status: "PENDING", refType: "BOOKING", refId: bookingRef, note: `Service charge · ${bookingRef}` });
+    }
   } catch (e) {
     console.warn("[bookings] commission attribution failed:", (e as Error).message);
   }
@@ -61,7 +71,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       take: 50,
     });
-    return NextResponse.json({ bookings });
+    return NextResponse.json({ bookings: await attachBillTo(bookings) });
   } catch {
     return NextResponse.json({ bookings: [] });
   }
@@ -180,7 +190,7 @@ export async function POST(req: NextRequest) {
       }),
     }).catch(() => {});
 
-    await attributeAgentCommission(bookingRef, grand);
+    await attributeAgentCommission(bookingRef, grand, Math.max(0, Number(body.agentMarkup) || 0));
     return NextResponse.json({ bookingRef, pnr, saved });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });

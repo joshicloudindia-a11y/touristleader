@@ -32,6 +32,7 @@ export function ForexWidget() {
     if (!f.name.trim()) { setError("Please enter your name."); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) { setError("Please enter a valid email."); return; }
     if (f.phone.replace(/\D/g, "").length < 10) { setError("Please enter a valid mobile number."); return; }
+    if (type === "CARD" && !f.address.trim()) { setError("Please enter your delivery address."); return; }
     if (type === "NOTES" && currencies.length === 0) { setError("Please select at least one currency."); return; }
     setBusy(true);
     try {
@@ -85,7 +86,7 @@ export function ForexWidget() {
           <Field icon={Phone} placeholder="Mobile Number *" value={f.phone} onValue={(v) => set("phone", v)} />
           <Field icon={Mail} placeholder="Email *" value={f.email} onValue={(v) => set("email", v)} type="email" />
           {type === "CARD"
-            ? <Field icon={FileText} placeholder="PAN number" value={f.pan} onValue={(v) => set("pan", v)} />
+            ? <Field icon={FileText} placeholder="PAN number" value={f.pan} onValue={(v) => set("pan", v.toUpperCase())} />
             : <Field icon={Banknote} placeholder="Approx. amount (optional)" value={f.amount} onValue={(v) => set("amount", v)} />}
           <div className="lg:col-span-2"><Field icon={MapPin} placeholder={type === "CARD" ? "Address *" : "Delivery address (optional)"} value={f.address} onValue={(v) => set("address", v)} /></div>
         </div>

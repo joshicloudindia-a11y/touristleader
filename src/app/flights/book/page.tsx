@@ -9,6 +9,7 @@ import { InfoPopup } from "@/components/ui/InfoPopup";
 import { FlightSummaryCard } from "@/components/booking/FlightSummaryCard";
 import { PriceSummary } from "@/components/booking/PriceSummary";
 import { OFFERS } from "@/lib/constants";
+import { isKnownPromo } from "@/lib/offers";
 import { useBooking } from "@/store/booking";
 import { useAuth } from "@/store/auth";
 
@@ -19,6 +20,7 @@ export default function BookPage() {
   const authFetched = useAuth((s) => s.fetched);
   const requireAuth = useAuth((s) => s.requireAuth);
   const [promo, setPromoLocal] = useState(promoCode);
+  const [promoErr, setPromoErr] = useState("");
   const [wheelchair, setWheelchair] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -37,7 +39,14 @@ export default function BookPage() {
 
   if (!mounted || !flight) return null;
 
-  const applyPromo = () => setPromo(promo.trim().toUpperCase());
+  const applyPromo = () => {
+    const code = promo.trim().toUpperCase();
+    if (!code) return;
+    if (!isKnownPromo(code)) { setPromoErr("Invalid or expired promo code."); return; }
+    setPromoErr("");
+    setPromo(code);
+  };
+  const removePromo = () => { setPromo(""); setPromoLocal(""); setPromoErr(""); };
 
   const toggleWheelchair = () => {
     const next = !wheelchair;
@@ -58,11 +67,12 @@ export default function BookPage() {
               {/* Promo + offers */}
               <Section title="Promo code & offers" icon={Tag}>
                 <div className="flex gap-2">
-                  <input value={promo} onChange={(e) => setPromoLocal(e.target.value)} placeholder="Enter promo code"
+                  <input value={promo} onChange={(e) => { setPromoLocal(e.target.value); setPromoErr(""); }} placeholder="Enter promo code"
                     className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm uppercase outline-none focus:border-brand" />
                   <Button variant="outline" onClick={applyPromo}>Apply</Button>
                 </div>
-                {promoCode && <p className="mt-2 text-xs font-semibold text-emerald-600">✓ {promoCode} applied</p>}
+                {promoErr && <p className="mt-2 text-xs font-semibold text-rose-500">{promoErr}</p>}
+                {promoCode && <p className="mt-2 flex items-center gap-2 text-xs font-semibold text-emerald-600">✓ {promoCode} applied — discount shown in Fare Summary <button onClick={removePromo} className="text-slate-400 underline hover:text-rose-500">Remove</button></p>}
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {OFFERS.map((o) => (
                     <button key={o.id} onClick={() => { setPromoLocal(o.code); setPromo(o.code); }}

@@ -6,7 +6,7 @@ export const DICT: Record<string, Record<string, string>> = {
     // header utility
     nav_listProperty: "List Your Property", nav_listPropertySub: "Grow your business!",
     nav_tlBiz: "TL Biz", nav_tlBizSub: "Business Travel",
-    nav_myTrips: "My Trips", nav_myTripsSub: "Manage bookings",
+    nav_myTrips: "My Dashboard", nav_myTripsSub: "Manage bookings",
     nav_wishlist: "Wishlist", nav_wishlistSub: "Saved favourites",
     nav_bookFlights: "Book Your Flights", nav_bookFlightsSub: "Best fares, live search",
     nav_bookHotels: "Book Your Hotels", nav_bookHotelsSub: "50,000+ stays",
@@ -14,7 +14,7 @@ export const DICT: Record<string, Record<string, string>> = {
     hdr_offers: "Offers", hdr_help: "Help", hdr_menu: "Menu",
     // auth
     auth_login: "Login / Signup", auth_hi: "Hi", auth_account: "Account",
-    auth_myAccount: "My Account", auth_myTrips: "My Trips", auth_myWallet: "My Wallet",
+    auth_myAccount: "My Account", auth_myTrips: "My Dashboard", auth_myWallet: "My Wallet",
     auth_wishlist: "Wishlist", auth_myTickets: "My Tickets", auth_agentConsole: "Agent Console",
     auth_adminPanel: "Admin Panel", auth_logout: "Logout",
     // product tabs
@@ -54,14 +54,14 @@ export const DICT: Record<string, Record<string, string>> = {
   hi: {
     nav_listProperty: "अपनी प्रॉपर्टी जोड़ें", nav_listPropertySub: "अपना व्यापार बढ़ाएँ!",
     nav_tlBiz: "TL बिज़", nav_tlBizSub: "बिज़नेस ट्रैवल",
-    nav_myTrips: "मेरी यात्राएँ", nav_myTripsSub: "बुकिंग प्रबंधित करें",
+    nav_myTrips: "मेरा डैशबोर्ड", nav_myTripsSub: "बुकिंग प्रबंधित करें",
     nav_wishlist: "पसंदीदा", nav_wishlistSub: "सहेजे गए",
     nav_bookFlights: "फ़्लाइट बुक करें", nav_bookFlightsSub: "बेहतरीन किराए, लाइव सर्च",
     nav_bookHotels: "होटल बुक करें", nav_bookHotelsSub: "50,000+ स्टे",
     bn_holidays: "हॉलिडे", bn_account: "अकाउंट",
     hdr_offers: "ऑफ़र", hdr_help: "मदद", hdr_menu: "मेन्यू",
     auth_login: "लॉगिन / साइनअप", auth_hi: "नमस्ते", auth_account: "अकाउंट",
-    auth_myAccount: "मेरा अकाउंट", auth_myTrips: "मेरी यात्राएँ", auth_myWallet: "मेरा वॉलेट",
+    auth_myAccount: "मेरा अकाउंट", auth_myTrips: "मेरा डैशबोर्ड", auth_myWallet: "मेरा वॉलेट",
     auth_wishlist: "पसंदीदा", auth_myTickets: "मेरे टिकट", auth_agentConsole: "एजेंट कंसोल",
     auth_adminPanel: "एडमिन पैनल", auth_logout: "लॉगआउट",
     tab_flights: "फ़्लाइट", tab_hotels: "होटल", tab_holidays: "हॉलिडे पैकेज",
@@ -94,7 +94,7 @@ export const DICT: Record<string, Record<string, string>> = {
   ta: {
     nav_listProperty: "உங்கள் சொத்தைப் பட்டியலிடுங்கள்", nav_listPropertySub: "உங்கள் வணிகத்தை வளர்க்கவும்!",
     nav_tlBiz: "TL பிஸ்", nav_tlBizSub: "வணிகப் பயணம்",
-    nav_myTrips: "என் பயணங்கள்", nav_myTripsSub: "முன்பதிவுகளை நிர்வகி",
+    nav_myTrips: "எனது டாஷ்போர்டு", nav_myTripsSub: "முன்பதிவுகளை நிர்வகி",
     nav_wishlist: "விருப்பப்பட்டியல்", nav_wishlistSub: "சேமித்தவை",
     hdr_offers: "சலுகைகள்", hdr_help: "உதவி", hdr_menu: "மெனு",
     auth_login: "உள்நுழைய / பதிவு", auth_hi: "வணக்கம்",
@@ -114,7 +114,7 @@ export const DICT: Record<string, Record<string, string>> = {
   te: {
     nav_listProperty: "మీ ఆస్తిని జాబితా చేయండి", nav_listPropertySub: "మీ వ్యాపారాన్ని పెంచుకోండి!",
     nav_tlBiz: "TL బిజ్", nav_tlBizSub: "వ్యాపార ప్రయాణం",
-    nav_myTrips: "నా ప్రయాణాలు", nav_myTripsSub: "బుకింగ్‌లను నిర్వహించండి",
+    nav_myTrips: "నా డాష్‌బోర్డ్", nav_myTripsSub: "బుకింగ్‌లను నిర్వహించండి",
     nav_wishlist: "ఇష్టాల జాబితా", nav_wishlistSub: "సేవ్ చేసినవి",
     hdr_offers: "ఆఫర్‌లు", hdr_help: "సహాయం", hdr_menu: "మెను",
     auth_login: "లాగిన్ / సైనప్", auth_hi: "నమస్తే",
@@ -134,7 +134,7 @@ export const DICT: Record<string, Record<string, string>> = {
   bn: {
     nav_listProperty: "আপনার সম্পত্তি তালিকাভুক্ত করুন", nav_listPropertySub: "আপনার ব্যবসা বাড়ান!",
     nav_tlBiz: "TL বিজ", nav_tlBizSub: "ব্যবসায়িক ভ্রমণ",
-    nav_myTrips: "আমার ভ্রমণ", nav_myTripsSub: "বুকিং পরিচালনা করুন",
+    nav_myTrips: "আমার ড্যাশবোর্ড", nav_myTripsSub: "বুকিং পরিচালনা করুন",
     nav_wishlist: "পছন্দের তালিকা", nav_wishlistSub: "সংরক্ষিত",
     hdr_offers: "অফার", hdr_help: "সাহায্য", hdr_menu: "মেনু",
     auth_login: "লগইন / সাইনআপ", auth_hi: "নমস্কার",
@@ -154,7 +154,7 @@ export const DICT: Record<string, Record<string, string>> = {
   mr: {
     nav_listProperty: "तुमची मालमत्ता सूचीबद्ध करा", nav_listPropertySub: "तुमचा व्यवसाय वाढवा!",
     nav_tlBiz: "TL बिझ", nav_tlBizSub: "व्यवसाय प्रवास",
-    nav_myTrips: "माझ्या सहली", nav_myTripsSub: "बुकिंग व्यवस्थापित करा",
+    nav_myTrips: "माझा डॅशबोर्ड", nav_myTripsSub: "बुकिंग व्यवस्थापित करा",
     nav_wishlist: "आवडती यादी", nav_wishlistSub: "जतन केलेले",
     hdr_offers: "ऑफर", hdr_help: "मदत", hdr_menu: "मेनू",
     auth_login: "लॉगिन / साइनअप", auth_hi: "नमस्कार",

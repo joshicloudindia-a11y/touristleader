@@ -45,7 +45,7 @@ export function PackageSearchWidget() {
 
       <div className="px-4 pt-4 sm:px-6">
         <div className="grid grid-cols-1 divide-y divide-slate-200 rounded-xl border border-slate-200 sm:grid-cols-2 sm:divide-y-0 md:grid-cols-12 md:divide-x">
-          <div className="border-b border-slate-200 sm:border-r sm:border-b-0 md:col-span-3 md:border-b-0"><CitySelect value={from} onChange={setFrom} /></div>
+          <div className="border-b border-slate-200 sm:border-r sm:border-b-0 md:col-span-3 md:border-b-0"><CitySelect value={from} onChange={setFrom} label="From (your city)" /></div>
 
           {/* To City / Country / Category */}
           <div className="relative border-b border-slate-200 sm:border-b-0 md:col-span-4" ref={toRef}>

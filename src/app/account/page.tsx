@@ -44,7 +44,7 @@ export default function AccountPage() {
 
               <button onClick={() => router.push("/account/trips")} className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-100 hover:ring-brand">
                 <Ticket size={20} className="text-brand" />
-                <span className="flex-1"><span className="block font-semibold text-slate-800">My Trips</span><span className="block text-xs text-slate-400">View your flight bookings</span></span>
+                <span className="flex-1"><span className="block font-semibold text-slate-800">My Dashboard</span><span className="block text-xs text-slate-400">View your bookings & enquiries</span></span>
               </button>
 
               <Button variant="outline" className="w-full !text-rose-600 !border-rose-200 hover:!bg-rose-50" onClick={async () => { await logout(); router.push("/"); }}>

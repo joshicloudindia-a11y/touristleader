@@ -131,9 +131,11 @@ export default function HotelPaymentPage() {
                     <span className={cn("h-4 w-4 rounded-full border-2", method === m.id ? "border-brand bg-brand" : "border-slate-300")} />
                   </button>
                 ))}
-                <div className="px-3 py-2">
-                  <div className="rounded-lg bg-sky-50 px-3 py-2 text-[11px] text-sky-700"><b>Test mode:</b> the checkout opens on UPI — enter <b>success@razorpay</b> → choose Success. Secured by <b className="text-[#072654]">Razorpay</b>.</div>
-                </div>
+                {process.env.NEXT_PUBLIC_SHOW_TEST_HINTS === "1" && (
+                  <div className="px-3 py-2">
+                    <div className="rounded-lg bg-sky-50 px-3 py-2 text-[11px] text-sky-700"><b>Test mode:</b> the checkout opens on UPI — enter <b>success@razorpay</b> → choose Success. Secured by <b className="text-[#072654]">Razorpay</b>.</div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">

@@ -4,7 +4,7 @@ import { MapPin, Search } from "lucide-react";
 import { HOTEL_CITIES } from "@/lib/hotel-constants";
 import { cn } from "@/lib/utils";
 
-export function CitySelect({ value, onChange, compact = false }: { value: string; onChange: (city: string) => void; compact?: boolean }) {
+export function CitySelect({ value, onChange, compact = false, label = "City, Property or Location" }: { value: string; onChange: (city: string) => void; compact?: boolean; label?: string }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -22,7 +22,7 @@ export function CitySelect({ value, onChange, compact = false }: { value: string
     <div className="relative min-w-0" ref={ref}>
       <button type="button" onClick={() => setOpen((o) => !o)}
         className={cn("flex w-full flex-col items-start text-left transition-colors hover:bg-slate-50", compact ? "rounded-xl px-3 py-2" : "rounded-xl px-4 py-3")}>
-        <span className="w-full truncate text-[11px] font-medium uppercase tracking-wide text-slate-400">City, Property or Location</span>
+        <span className="w-full truncate text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</span>
         <span className={cn("w-full truncate font-bold leading-tight text-slate-900", compact ? "text-base" : "mt-0.5 text-2xl")}>{selected?.city || value || "Where to?"}</span>
         <span className="w-full truncate text-xs text-slate-500">{selected ? `${selected.country} · ${selected.hint}` : "—"}</span>
       </button>

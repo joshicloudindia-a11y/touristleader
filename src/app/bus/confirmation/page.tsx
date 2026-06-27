@@ -49,9 +49,9 @@ function Confirmation() {
             <Info icon={BusIcon} title="Passengers" value={String(passengers.length || seats.length)} />
           </div>
           {contactEmail && <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700"><Mail size={15} /> Ticket emailed to {contactEmail}</p>}
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="no-print mt-4 grid grid-cols-2 gap-2">
             <Button variant="outline" size="sm" onClick={() => window.print()}><Download size={15} /> Download Ticket</Button>
-            <Button variant="outline" size="sm" onClick={() => router.push("/account/trips")}>My Trips</Button>
+            <Button variant="outline" size="sm" onClick={() => router.push("/account/trips")}>My Dashboard</Button>
           </div>
           <p className="mt-3 text-center text-[11px] text-slate-400">Reach the boarding point 15 minutes early & carry a valid photo ID.</p>
         </div>

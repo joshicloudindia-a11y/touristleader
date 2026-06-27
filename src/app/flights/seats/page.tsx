@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { PriceSummary } from "@/components/booking/PriceSummary";
 import { useBooking } from "@/store/booking";
 import { MEALS } from "@/lib/constants";
+import { seatCharge, mealCharge, seatablePax } from "@/lib/fare-rules";
 import { cn, formatINR } from "@/lib/utils";
 
 const COLS = ["A", "B", "C", "D", "E", "F"];
@@ -41,7 +42,9 @@ export default function SeatsPage() {
     setMounted(true);
     const st = useBooking.getState();
     if (!st.flight || !st.query) { router.replace("/"); return; }
-    const names = st.passengers.length ? st.passengers.map((p) => p.fullName || "Passenger") : ["Passenger"];
+    // Infants travel on lap — only adults + children get a seat.
+    const seatable = seatablePax(st.query.travellers);
+    const names = st.passengers.length ? st.passengers.slice(0, seatable).map((p) => p.fullName || "Passenger") : ["Passenger"];
     setPax(names);
     setSeats(st.seats);
   }, [router]);
@@ -59,14 +62,16 @@ export default function SeatsPage() {
   };
 
   const recalc = (s: Record<number, string>) => {
+    const fareId = useBooking.getState().fare?.id;
     let seatTotal = 0;
     Object.values(s).forEach((id) => {
       const r = parseInt(id);
       const c = id.replace(/\d/g, "");
-      seatTotal += seatPrice(r, c);
+      seatTotal += seatCharge(fareId, seatPrice(r, c)); // inclusive fares = free standard/preferred seat
     });
     const mealTotal = Object.values(useBooking.getState().meals).reduce((acc, mid) => {
-      return acc + (MEALS.find((m) => m.id === mid)?.price || 0);
+      const meal = MEALS.find((m) => m.id === mid);
+      return acc + (meal ? mealCharge(fareId, meal.id, meal.price) : 0);
     }, 0);
     useBooking.setState({ addOns: seatTotal + mealTotal });
   };
@@ -121,7 +126,7 @@ export default function SeatsPage() {
                           else if (chosen.has(id)) state = "booked";
                           return (
                             <button key={id} onClick={() => pick(id, price)} disabled={state === "booked"}
-                              title={state === "booked" ? "Unavailable" : `${id} · ${formatINR(price)}`}
+                              title={state === "booked" ? "Unavailable" : `${id} · ${seatCharge(fare?.id, price) === 0 ? "Free" : formatINR(seatCharge(fare?.id, price))}`}
                               className={cn(
                                 "group relative grid h-8 w-8 place-items-center rounded-lg text-[9px] font-bold transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:hover:scale-100",
                                 i === 3 && "ml-6",

@@ -219,6 +219,25 @@ function Confirmation() {
     }
   };
 
+  // Add-on requests (cab, etc.) are logged as a support ticket so they reach the
+  // admin queue and notify the team — not just a toast.
+  const requestService = (label: string) => {
+    setToast(`${label} request sent — our team will contact you`);
+    fetch("/api/support", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: passengers?.[0]?.fullName || "Customer",
+        email: contactEmail || "guest@touristleader.com",
+        phone: contactPhone || "",
+        category: "GENERAL",
+        bookingRef: ref,
+        subject: `Add-on request: ${label}`,
+        message: `Customer requested "${label}" for booking ${ref} (PNR ${pnr}). Please reach out to arrange this add-on and collect any payment.`,
+      }),
+    }).catch(() => {});
+  };
+
   return (
     <main className="flex-1 bg-background">
       <div className="bg-gradient-to-b from-emerald-500 to-emerald-600 py-10 text-center text-white">
@@ -261,7 +280,7 @@ function Confirmation() {
           </div>
 
           {/* actions */}
-          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="no-print mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Button variant="outline" size="sm" onClick={() => window.print()}><Download size={15} /> PDF Ticket</Button>
             <Button variant="outline" size="sm" onClick={addToCalendar}><CalendarPlus size={15} /> Add to Calendar</Button>
             <Button variant="outline" size="sm" onClick={shareTrip}><Share2 size={15} /> Share Trip</Button>
@@ -277,7 +296,7 @@ function Confirmation() {
               <div key={c.id} className="rounded-xl border border-slate-200 p-3 text-center">
                 <Car size={24} className="mx-auto text-slate-400" />
                 <p className="mt-1 flex items-center justify-center gap-1 text-sm font-semibold text-slate-800">{c.label}<InfoPopup title={c.label} size={13}><p className="text-sm text-slate-700">{c.info}</p></InfoPopup></p>
-                <Button variant="soft" size="sm" className="mt-2 w-full" onClick={() => setToast(`${c.label} cab request noted`)}>Add</Button>
+                <Button variant="soft" size="sm" className="mt-2 w-full" onClick={() => requestService(`${c.label} airport cab`)}>Add</Button>
               </div>
             ))}
           </div>

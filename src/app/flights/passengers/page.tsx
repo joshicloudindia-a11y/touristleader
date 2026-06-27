@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Tooltip } from "@/components/ui/InfoPopup";
 import { PriceSummary } from "@/components/booking/PriceSummary";
 import { useBooking, type PassengerInput } from "@/store/booking";
+import { paxTypes, isDomesticRoute } from "@/lib/fare-rules";
 import { cn } from "@/lib/utils";
 
 const ID_TYPES = ["Aadhaar", "PAN", "Passport", "Driving Licence"];
@@ -66,11 +67,16 @@ export default function PassengersPage() {
     setMounted(true);
     const st = useBooking.getState();
     if (!st.flight || !st.query) { router.replace("/"); return; }
-    const count = Math.max(1, st.query.travellers.adults + st.query.travellers.children);
-    setPax(st.passengers.length === count ? st.passengers : Array.from({ length: count }, blank));
+    // One form per traveller — adults, then children, then infants.
+    const count = Math.max(1, paxTypes(st.query.travellers).length);
+    setPax(st.passengers.length === count ? st.passengers : Array.from({ length: count }, () => blank()));
   }, [router]);
 
   if (!mounted || !query) return null;
+
+  // Per-passenger type labels (Adult / Child / Infant) + domestic ID exemption.
+  const types = paxTypes(query.travellers);
+  const domestic = isDomesticRoute(query.from, query.to);
 
   const update = (i: number, patch: Partial<PassengerInput>) =>
     setPax((p) => p.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
@@ -90,7 +96,7 @@ export default function PassengersPage() {
     pax.forEach((p, i) => {
       set(`p${i}_fullName`, p.fullName);
       set(`p${i}_dob`, p.dob);
-      set(`p${i}_idNumber`, p.idNumber);
+      if (!domestic) set(`p${i}_idNumber`, p.idNumber); // ID not required for domestic travel
     });
     return e;
   };
@@ -147,7 +153,7 @@ export default function PassengersPage() {
                 const k = (f: string) => `p${i}_${f}`;
                 return (
                   <div key={i} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-                    <h2 className="mb-3 flex items-center gap-2 font-bold text-slate-900"><User size={18} className="text-brand" /> Passenger {i + 1} <span className="text-xs font-normal text-slate-400">(Adult)</span></h2>
+                    <h2 className="mb-3 flex items-center gap-2 font-bold text-slate-900"><User size={18} className="text-brand" /> Passenger {i + 1} <span className="text-xs font-normal text-slate-400">({types[i] || "Adult"})</span></h2>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Field label={<Tooltip text="Enter the exact name on your government ID. Mismatched names may lead to boarding denial."><span className="border-b border-dashed border-slate-300">Full Name (as per ID)</span></Tooltip>} error={errors[k("fullName")]} htmlFor={`fld-${k("fullName")}`}>
                         <Input id={`fld-${k("fullName")}`} value={p.fullName} error={errors[k("fullName")]} placeholder="e.g. Rahul Sharma"
@@ -170,10 +176,10 @@ export default function PassengersPage() {
                           {ID_TYPES.map((t) => <option key={t}>{t}</option>)}
                         </select>
                       </Field>
-                      <Field label="ID Number" error={errors[k("idNumber")]} htmlFor={`fld-${k("idNumber")}`}>
-                        <Input id={`fld-${k("idNumber")}`} value={p.idNumber} error={errors[k("idNumber")]} placeholder="ID number"
+                      <Field label={domestic ? "ID Number (optional)" : "ID Number"} error={errors[k("idNumber")]} htmlFor={`fld-${k("idNumber")}`}>
+                        <Input id={`fld-${k("idNumber")}`} value={p.idNumber} error={errors[k("idNumber")]} placeholder={domestic ? "Not required for domestic" : "ID number"}
                           onChange={(e) => { update(i, { idNumber: e.target.value }); clearIfValid(k("idNumber"), e.target.value); }}
-                          onBlur={(e) => blurValidate(k("idNumber"), e.target.value)} />
+                          onBlur={(e) => { if (!domestic) blurValidate(k("idNumber"), e.target.value); }} />
                       </Field>
                     </div>
                     <div className="mt-3">

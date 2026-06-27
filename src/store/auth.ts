@@ -11,6 +11,7 @@ export interface AuthUser {
 
 interface AuthState {
   user: AuthUser | null;
+  tier: "admin" | "agent" | "none";
   loading: boolean;
   fetched: boolean;
   // global login gate
@@ -28,6 +29,7 @@ interface AuthState {
 
 export const useAuth = create<AuthState>((set, get) => ({
   user: null,
+  tier: "none",
   loading: false,
   fetched: false,
   gateOpen: false,
@@ -41,7 +43,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     try {
       const res = await fetch("/api/auth/me", { cache: "no-store" });
       const data = await res.json();
-      set({ user: data.user || null, fetched: true });
+      set({ user: data.user || null, tier: data.tier || "none", fetched: true });
     } catch {
       set({ fetched: true });
     }

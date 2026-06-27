@@ -57,7 +57,7 @@ export const STRINGS: Record<string, Record<StringKey, string>> = {
   en: {
     listProperty: "List Your Property", listPropertySub: "Grow your business!",
     tlBiz: "TL Biz", tlBizSub: "Business Travel",
-    myTrips: "My Trips", myTripsSub: "Manage bookings",
+    myTrips: "My Dashboard", myTripsSub: "Manage bookings",
     wishlist: "Wishlist", wishlistSub: "Saved favourites",
     currency: "Currency", language: "Language", preferences: "Preferences",
     payNote: "Prices are indicative. Payments are processed in INR.",
@@ -65,7 +65,7 @@ export const STRINGS: Record<string, Record<StringKey, string>> = {
   hi: {
     listProperty: "अपनी प्रॉपर्टी जोड़ें", listPropertySub: "अपना व्यापार बढ़ाएँ!",
     tlBiz: "TL बिज़", tlBizSub: "बिज़नेस ट्रैवल",
-    myTrips: "मेरी यात्राएँ", myTripsSub: "बुकिंग प्रबंधित करें",
+    myTrips: "मेरा डैशबोर्ड", myTripsSub: "बुकिंग प्रबंधित करें",
     wishlist: "पसंदीदा", wishlistSub: "सहेजे गए",
     currency: "मुद्रा", language: "भाषा", preferences: "प्राथमिकताएँ",
     payNote: "कीमतें सांकेतिक हैं। भुगतान INR में होता है।",

@@ -6,11 +6,18 @@ export const dynamic = "force-dynamic";
 
 // Public — the header reads these toggles to decide which links to show.
 export async function GET() {
-  const cfg = await prisma.siteConfig.findUnique({ where: { id: "default" } });
-  return NextResponse.json({
-    showListProperty: cfg?.showListProperty ?? false,
-    showTlBiz: cfg?.showTlBiz ?? false,
-  });
+  try {
+    const cfg = await prisma.siteConfig.findUnique({ where: { id: "default" } });
+    return NextResponse.json({
+      showListProperty: cfg?.showListProperty ?? false,
+      showTlBiz: cfg?.showTlBiz ?? false,
+    });
+  } catch {
+    // DB unreachable (e.g. a cold/paused TiDB Serverless cluster on the first
+    // request) — fall back to the safe defaults rather than 500ing, mirroring
+    // how getSessionUser() swallows the same error.
+    return NextResponse.json({ showListProperty: false, showTlBiz: false });
+  }
 }
 
 // Super Admin only.

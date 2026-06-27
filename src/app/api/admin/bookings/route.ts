@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/auth";
+import { attachBillTo } from "@/lib/invoice-billing";
 
 export const dynamic = "force-dynamic";
 
@@ -19,5 +20,5 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
     take: 200,
   });
-  return NextResponse.json({ bookings });
+  return NextResponse.json({ bookings: await attachBillTo(bookings) });
 }

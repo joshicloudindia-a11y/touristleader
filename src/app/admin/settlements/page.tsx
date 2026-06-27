@@ -5,7 +5,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { formatINR, formatDate, cn } from "@/lib/utils";
 
-interface Agent { id: string; name: string; email: string; state: string | null; balance: number; totalEarned: number; bookings: number }
+interface Agent { id: string; name: string; email: string; state: string | null; balance: number; pending: number; totalEarned: number; bookings: number }
 interface Settlement { id: string; agentId: string; agentName: string; amount: number; note: string | null; createdAt: string }
 
 export default function AdminSettlementsPage() {
@@ -21,14 +21,14 @@ export default function AdminSettlementsPage() {
   useEffect(load, []);
 
   const settle = async (a: Agent) => {
-    if (!confirm(`Settle ${formatINR(a.balance)} to ${a.name}? This records the payout and resets their wallet to ₹0.`)) return;
+    if (!confirm(`Settle ${formatINR(a.pending)} commission to ${a.name}? This records the payout and clears their pending commission.`)) return;
     setBusy(a.id);
     const res = await fetch("/api/admin/settlements", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agentId: a.id }) });
     if (!res.ok) { const d = await res.json(); alert(d.error || "Could not settle"); }
     setBusy(""); load();
   };
 
-  const totalOwed = agents.reduce((a, x) => a + x.balance, 0);
+  const totalOwed = agents.reduce((a, x) => a + x.pending, 0);
 
   return (
     <AdminShell title="Settlements">
@@ -42,16 +42,16 @@ export default function AdminSettlementsPage() {
         <>
           <div className="overflow-x-auto rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
             <table className="w-full min-w-[640px] text-sm">
-              <thead><tr className="border-b border-slate-100 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400"><th className="px-4 py-3">Agent</th><th className="px-4 py-3">Bookings</th><th className="px-4 py-3">Total earned</th><th className="px-4 py-3">Wallet (to settle)</th><th className="px-4 py-3 text-right">Action</th></tr></thead>
+              <thead><tr className="border-b border-slate-100 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400"><th className="px-4 py-3">Agent</th><th className="px-4 py-3">Bookings</th><th className="px-4 py-3">Total earned</th><th className="px-4 py-3">Commission owed</th><th className="px-4 py-3 text-right">Action</th></tr></thead>
               <tbody>
                 {agents.map((a) => (
                   <tr key={a.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
                     <td className="px-4 py-3"><p className="font-semibold text-slate-800">{a.name}</p><p className="text-xs text-slate-400">{a.email}{a.state ? ` · ${a.state}` : ""}</p></td>
                     <td className="px-4 py-3 text-slate-600">{a.bookings}</td>
                     <td className="px-4 py-3 text-slate-600">{formatINR(a.totalEarned)}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900">{formatINR(a.balance)}</td>
+                    <td className="px-4 py-3 font-bold text-slate-900">{formatINR(a.pending)}</td>
                     <td className="px-4 py-3 text-right">
-                      {a.balance > 0 ? <Button size="sm" onClick={() => settle(a)} disabled={busy === a.id}>{busy === a.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Settle</Button> : <span className="text-xs text-slate-300">—</span>}
+                      {a.pending > 0 ? <Button size="sm" onClick={() => settle(a)} disabled={busy === a.id}>{busy === a.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Settle</Button> : <span className="text-xs text-slate-300">—</span>}
                     </td>
                   </tr>
                 ))}

@@ -29,6 +29,7 @@ interface BookingState {
   addOns: number;
   promoCode: string;
   customerState: string;
+  agentMarkup: number; // agent's own service charge added at checkout (agent bookings only)
   setQuery: (q: SearchQuery) => void;
   selectFlight: (f: Flight, fare: FareOption) => void;
   setPassengers: (p: PassengerInput[]) => void;
@@ -38,6 +39,7 @@ interface BookingState {
   setAddOns: (n: number) => void;
   setPromo: (code: string) => void;
   setCustomerState: (s: string) => void;
+  setAgentMarkup: (n: number) => void;
   reset: () => void;
   totalAmount: () => number;
 }
@@ -56,6 +58,7 @@ export const useBooking = create<BookingState>()(
       addOns: 0,
       promoCode: "",
       customerState: "",
+      agentMarkup: 0,
       setQuery: (query) => set({ query }),
       selectFlight: (flight, fare) => set({ flight, fare }),
       setPassengers: (passengers) => set({ passengers }),
@@ -65,8 +68,9 @@ export const useBooking = create<BookingState>()(
       setAddOns: (addOns) => set({ addOns }),
       setPromo: (promoCode) => set({ promoCode }),
       setCustomerState: (customerState) => set({ customerState }),
+      setAgentMarkup: (agentMarkup) => set({ agentMarkup }),
       reset: () =>
-        set({ flight: null, fare: null, passengers: [], seats: {}, meals: {}, addOns: 0, promoCode: "" }),
+        set({ flight: null, fare: null, passengers: [], seats: {}, meals: {}, addOns: 0, promoCode: "", agentMarkup: 0 }),
       totalAmount: () => {
         const { fare, query, addOns } = get();
         if (!fare || !query) return 0;

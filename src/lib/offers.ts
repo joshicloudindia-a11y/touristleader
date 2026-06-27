@@ -13,6 +13,31 @@ export interface Offer {
   terms: string[];
 }
 
+/** Is this a recognised promo code (case-insensitive)? */
+export function isKnownPromo(code: string): boolean {
+  const c = (code || "").trim().toUpperCase();
+  return DEMO_OFFERS.some((o) => o.code === c);
+}
+
+/**
+ * Instant rupee discount a promo code applies to the discountable base (fare + add-ons).
+ * Returns 0 for unknown codes, below-minimum bookings, or cashback/bonus codes
+ * (TLUPI / TLWALLET) which are credited to the wallet after payment, not at checkout.
+ */
+export function promoDiscount(code: string, base: number): number {
+  const c = (code || "").trim().toUpperCase();
+  if (base <= 0) return 0;
+  switch (c) {
+    case "TLHDFC": return base >= 5000 ? Math.min(1500, base) : 0;                 // flat ₹1,500 · min ₹5,000
+    case "TLICICI": return base >= 8000 ? Math.min(2000, Math.round(base * 0.1)) : 0; // 10% · max ₹2,000 · min ₹8,000
+    case "TLSTUDENT": return Math.round(base * 0.1);                                // 10% off base fare
+    case "TLSENIOR": return Math.min(600, base);                                    // up to ₹600
+    case "TLFEST": return Math.round(base * 0.15);                                  // festive ~15%
+    case "TLSTAY": return Math.min(3000, Math.round(base * 0.25));                  // hotels 25% · max ₹3,000
+    default: return 0;
+  }
+}
+
 export const OFFER_CATEGORIES: { id: OfferCategory | "ALL"; label: string }[] = [
   { id: "ALL", label: "All Offers" },
   { id: "BANK", label: "Bank Offers" },

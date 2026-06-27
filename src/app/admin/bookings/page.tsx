@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plane, BedDouble, Bus, Search } from "lucide-react";
+import { Loader2, Plane, BedDouble, Bus, Search, FileText } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { formatINR, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { buildInvoiceHtml, buildInvoiceDataFromBooking, openInvoice, type BookingLike } from "@/lib/invoice";
 
-interface Booking { id: string; bookingRef: string; pnr: string | null; bookingType: string; source?: string; status: string; paymentStatus: string; origin: string; destination: string; departDate: string; totalAmount: number; contactEmail: string; contactPhone: string; createdAt: string; cabinClass: string }
+interface Booking extends BookingLike { id: string; source?: string; status: string; paymentStatus: string }
 const TABS = [["ALL", "All"], ["FLIGHT", "Flights"], ["HOTEL", "Hotels"], ["BUS", "Bus"]] as const;
 const ICON: Record<string, React.ElementType> = { FLIGHT: Plane, HOTEL: BedDouble, BUS: Bus };
 
@@ -51,22 +52,27 @@ export default function AdminBookingsPage() {
         <div className="overflow-x-auto rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
           <table className="w-full min-w-[760px] text-sm">
             <thead><tr className="border-b border-slate-100 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
-              <th className="px-4 py-3">API / Source</th><th className="px-4 py-3">Booking</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Route</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Date</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">API / Source</th><th className="px-4 py-3">Booking</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Route</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Date</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Invoice</th>
             </tr></thead>
             <tbody>
-              {filtered.map((b) => { const Icon = ICON[b.bookingType] || Plane; return (
+              {filtered.map((b) => { const Icon = ICON[b.bookingType || "FLIGHT"] || Plane; return (
                 <tr key={b.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
                   <td className="px-4 py-3"><span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold", sourceMeta(b.source).cls)}>{sourceMeta(b.source).label}</span></td>
                   <td className="px-4 py-3"><p className="font-semibold text-slate-900">{b.bookingRef}</p><p className="text-xs text-slate-400">{b.pnr || ""}</p></td>
-                  <td className="px-4 py-3"><span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600"><Icon size={11} /> {b.bookingType}</span></td>
+                  <td className="px-4 py-3"><span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600"><Icon size={11} /> {b.bookingType || "FLIGHT"}</span></td>
                   <td className="px-4 py-3 text-slate-700">{b.origin} → {b.destination}<p className="text-xs text-slate-400">{b.cabinClass}</p></td>
                   <td className="px-4 py-3"><p className="text-slate-700">{b.contactEmail}</p><p className="text-xs text-slate-400">{b.contactPhone}</p></td>
                   <td className="px-4 py-3 text-slate-600">{formatDate(b.departDate)}</td>
                   <td className="px-4 py-3 text-right font-bold text-slate-900">{formatINR(b.totalAmount)}</td>
                   <td className="px-4 py-3"><span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700">{b.status}</span><p className="mt-0.5 text-[10px] text-slate-400">{b.paymentStatus}</p></td>
+                  <td className="px-4 py-3 text-right">
+                    <button onClick={() => openInvoice(buildInvoiceHtml(buildInvoiceDataFromBooking(b), window.location.origin), b.bookingRef)} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200" title="Open / print invoice">
+                      <FileText size={13} /> Invoice
+                    </button>
+                  </td>
                 </tr>
               ); })}
-              {filtered.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-400">No bookings found.</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-slate-400">No bookings found.</td></tr>}
             </tbody>
           </table>
         </div>

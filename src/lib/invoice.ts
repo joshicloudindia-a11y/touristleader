@@ -1,4 +1,12 @@
-import { formatINR } from "./utils";
+import { formatINR, formatDate, formatTime } from "./utils";
+import { AIRPORTS } from "./constants";
+
+/** Who the invoice is billed to. Customer details for direct bookings, agency details for agent bookings. */
+export interface BillTo {
+  label: string; // "Billed To" | "Billed To (Agent)"
+  name: string; // customer name or agency name
+  lines: string[]; // address / GSTIN / contact lines
+}
 
 export interface InvoiceData {
   ref: string;
@@ -6,6 +14,8 @@ export interface InvoiceData {
   name: string;
   email?: string;
   phone?: string;
+  // Resolved billing party (server-side). When present it overrides name/email/phone in the "Billed To" card.
+  billTo?: BillTo;
   // booking kind controls labels (defaults to FLIGHT for backward compat)
   kind?: "FLIGHT" | "BUS" | "HOTEL";
   // generic details card: pass detailsTitle + detailLines for bus/hotel
@@ -36,6 +46,104 @@ export interface InvoiceData {
 }
 
 const PNR_LABEL: Record<string, string> = { FLIGHT: "PNR", BUS: "Ticket No.", HOTEL: "Confirmation No." };
+
+const FARE_LABELS: Record<string, string> = { FEE_SAVER: "Fee Saver", REGULAR: "Regular", COMFORT: "Comfort", YOUR_CHOICE: "Your Choice" };
+function cityName(code: string): string {
+  return AIRPORTS.find((a) => a.code === code)?.city || code;
+}
+
+/** Loosely-typed itinerary snapshot stored on a booking (Json column). */
+interface FlightDataLike {
+  airlineName?: string; flightNumber?: string; departTime?: string; arriveTime?: string;
+  operator?: string; busType?: string; seatIds?: string[]; boarding?: { name?: string; time?: string };
+  name?: string; area?: string; city?: string; roomName?: string; nights?: number; checkIn?: string; checkOut?: string; rooms?: number;
+}
+
+/** The booking fields needed to render an invoice (shared by My Trips and the agent/admin back-office). */
+export interface BookingLike {
+  bookingRef: string;
+  pnr?: string | null;
+  bookingType?: string | null;
+  origin: string;
+  destination: string;
+  departDate: string;
+  cabinClass: string;
+  fareType?: string;
+  adults: number;
+  children: number;
+  baseFare: number;
+  taxes: number;
+  addOns: number;
+  totalAmount: number;
+  serviceCharge?: number;
+  gstType?: string | null;
+  igst?: number;
+  cgst?: number;
+  sgst?: number;
+  contactEmail: string;
+  contactPhone: string;
+  createdAt: string;
+  passengers?: { fullName?: string }[] | null;
+  flightData?: FlightDataLike | null;
+  billTo?: BillTo; // attached server-side
+}
+
+/** Build print-ready invoice data from a stored booking. Bill-to is taken from booking.billTo (resolved server-side). */
+export function buildInvoiceDataFromBooking(b: BookingLike): InvoiceData {
+  const kind = ((b.bookingType as InvoiceData["kind"]) || "FLIGHT") as "FLIGHT" | "BUS" | "HOTEL";
+  const f: FlightDataLike = b.flightData || {};
+  const total = b.totalAmount || 0;
+  let base: number;
+  let taxes = b.taxes || 0;
+  let pax = Math.max(1, b.adults + b.children);
+  if (kind === "FLIGHT") { base = (b.baseFare || 0) * pax; taxes = (b.taxes || 0) * pax; }
+  else if (kind === "HOTEL") { base = (b.baseFare || 0) * (f.nights || 1); }
+  else { base = b.baseFare || 0; pax = b.adults || f.seatIds?.length || 1; } // BUS: stored base is full seats fare
+  const addOns = b.addOns || 0;
+  const serviceCharge = b.serviceCharge || 0;
+  const gstTotal = (b.igst || 0) + (b.cgst || 0) + (b.sgst || 0);
+  const convenience = Math.max(0, total - base - taxes - addOns - serviceCharge - gstTotal);
+
+  let detailsTitle = "Flight Details";
+  let detailLines: string[];
+  if (kind === "BUS") {
+    detailsTitle = "Bus Details";
+    detailLines = [
+      `<b>${f.operator || "-"}</b>`,
+      `${f.busType || b.cabinClass}`,
+      `${cityName(b.origin)} &rarr; ${cityName(b.destination)}`,
+      `${formatDate(b.departDate)}${f.departTime ? ` &middot; ${formatTime(f.departTime)}` : ""}`,
+      `Seats: ${(f.seatIds || []).join(", ") || "-"} &middot; ${pax} passenger${pax > 1 ? "s" : ""}`,
+      `Boarding: ${f.boarding?.name || "-"}${f.boarding?.time ? ` (${f.boarding.time})` : ""}`,
+    ];
+  } else if (kind === "HOTEL") {
+    detailsTitle = "Stay Details";
+    detailLines = [
+      `<b>${f.name || "-"}</b>`,
+      `${f.area ? `${f.area}, ` : ""}${f.city || ""}`,
+      `${f.roomName || b.cabinClass} &middot; ${f.nights || 1} night${(f.nights || 1) > 1 ? "s" : ""}`,
+      `${f.checkIn || formatDate(b.departDate)} &rarr; ${f.checkOut || ""}`,
+      `${f.rooms || 1} room${(f.rooms || 1) > 1 ? "s" : ""} &middot; ${pax} guest${pax > 1 ? "s" : ""}`,
+    ];
+  } else {
+    detailLines = [
+      `<b>${f.airlineName || "-"} ${f.flightNumber || ""}</b>`,
+      `${cityName(b.origin)} (${b.origin}) &rarr; ${cityName(b.destination)} (${b.destination})`,
+      `${formatDate(b.departDate)}${f.departTime ? ` &middot; ${formatTime(f.departTime)}` : ""}`,
+      `${b.cabinClass} &middot; ${FARE_LABELS[b.fareType || ""] || b.fareType || "-"} &middot; ${pax} traveller${pax > 1 ? "s" : ""}`,
+    ];
+  }
+
+  return {
+    ref: b.bookingRef, pnr: b.pnr || "—", kind, detailsTitle, detailLines,
+    name: b.passengers?.[0]?.fullName || "Guest", email: b.contactEmail, phone: b.contactPhone,
+    billTo: b.billTo,
+    dateLabel: formatDate(b.departDate), pax,
+    base, taxes, addOns, convenience, total,
+    serviceCharge, igst: b.igst || 0, cgst: b.cgst || 0, sgst: b.sgst || 0,
+    invDate: formatDate(b.createdAt),
+  };
+}
 
 /** Branded, print-ready HTML invoice (same design as the confirmation page). */
 export function buildInvoiceHtml(d: InvoiceData, origin: string): string {
@@ -104,10 +212,13 @@ export function buildInvoiceHtml(d: InvoiceData, origin: string): string {
     </div>
     <div class="body">
       <div class="cards">
-        <div class="card"><h4>Billed To</h4>
-          <div class="line"><b>${d.name}</b></div>
-          ${d.email ? `<div class="line">${d.email}</div>` : ""}
-          ${d.phone ? `<div class="line">${d.phone}</div>` : ""}
+        <div class="card"><h4>${d.billTo?.label || "Billed To"}</h4>
+          <div class="line"><b>${d.billTo?.name || d.name}</b></div>
+          ${
+            d.billTo?.lines?.length
+              ? d.billTo.lines.map((l) => `<div class="line">${l}</div>`).join("")
+              : `${d.email ? `<div class="line">${d.email}</div>` : ""}${d.phone ? `<div class="line">${d.phone}</div>` : ""}`
+          }
         </div>
         <div class="card"><h4>${detailsTitle}</h4>
           ${detailLines.map((l) => `<div class="line">${l}</div>`).join("")}
