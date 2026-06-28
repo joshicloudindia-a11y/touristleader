@@ -107,6 +107,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { flight, fare, query, passengers, seats, meals, contactEmail, contactPhone, total } = body;
+    const extraFlights = Array.isArray(body.extraFlights) ? body.extraFlights : []; // return / multi-city legs
     if (!flight || !fare || !query || !contactEmail) {
       return NextResponse.json({ error: "Missing booking details" }, { status: 400 });
     }
@@ -151,7 +152,7 @@ export async function POST(req: NextRequest) {
           paymentStatus: (razorpayPaymentId || body.paymentSource === "wallet") ? "PAID" : "TEST",
           contactEmail,
           contactPhone: contactPhone || "",
-          flightData: flight,
+          flightData: extraFlights.length ? { ...flight, extraFlights } : flight,
           passengers: passengers || [],
           seats: seats || {},
           meals: meals || {},

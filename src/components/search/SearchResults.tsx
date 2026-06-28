@@ -1,15 +1,132 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SlidersHorizontal, X } from "lucide-react";
-import type { Flight, SearchQuery, TripType, CabinClass } from "@/lib/types";
+import { SlidersHorizontal, X, Loader2, Check, ArrowRight } from "lucide-react";
+import type { Flight, FareOption, SearchQuery, TripType, CabinClass } from "@/lib/types";
 import { SORT_OPTIONS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
+import { useMoney } from "@/store/preferences";
+import { useBooking, type ItineraryLeg } from "@/store/booking";
+import { useAuth } from "@/store/auth";
 import { InfoPopup } from "@/components/ui/InfoPopup";
 import { FareCalendar } from "./FareCalendar";
 import { FilterPanel, DEFAULT_FILTERS, type Filters } from "./FilterPanel";
 import { FlightCard } from "./FlightCard";
 import { ModifySearch } from "./ModifySearch";
+
+interface Leg { from: string; to: string; date: string; label: string }
+
+/** Expand a search query into its itinerary legs (1 one-way, 2 round-trip, N multi-city). */
+function buildLegs(sp: URLSearchParams, q: SearchQuery): Leg[] {
+  if (q.tripType === "ROUND_TRIP") {
+    return [
+      { from: q.from, to: q.to, date: q.departDate, label: "Onward" },
+      { from: q.to, to: q.from, date: q.returnDate || q.departDate, label: "Return" },
+    ];
+  }
+  if (q.tripType === "MULTI_CITY") {
+    const raw = (sp.get("legs") || "").split("~").filter(Boolean);
+    const legs = raw.map((s, i) => {
+      const p = s.split("-");
+      return { from: p[0], to: p[1], date: p.slice(2).join("-"), label: `Flight ${i + 1}` };
+    });
+    return legs.length ? legs : [{ from: q.from, to: q.to, date: q.departDate, label: "Flight 1" }];
+  }
+  return [{ from: q.from, to: q.to, date: q.departDate, label: "" }];
+}
+
+/** Round-trip / multi-city: pick one flight per leg, then book the combined itinerary. */
+function MultiLegResults({ legs, query }: { legs: Leg[]; query: SearchQuery }) {
+  const router = useRouter();
+  const money = useMoney();
+  const setItinerary = useBooking((s) => s.setItinerary);
+  const setQuery = useBooking((s) => s.setQuery);
+  const requireAuth = useAuth((s) => s.requireAuth);
+  const [legFlights, setLegFlights] = useState<Flight[][]>([]);
+  const [picks, setPicks] = useState<(ItineraryLeg | null)[]>(() => legs.map(() => null));
+  const [active, setActive] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const legsKey = legs.map((l) => `${l.from}-${l.to}-${l.date}`).join("|");
+
+  useEffect(() => {
+    setLoading(true);
+    setPicks(legs.map(() => null));
+    setActive(0);
+    Promise.all(
+      legs.map((l) => {
+        const p = new URLSearchParams({
+          from: l.from, to: l.to, departDate: l.date, tripType: "ONE_WAY",
+          cabinClass: query.cabinClass, passengerType: query.passengerType || "REGULAR",
+          adults: String(query.travellers.adults), children: String(query.travellers.children), infants: String(query.travellers.infants),
+        });
+        return fetch(`/api/flights/search?${p}`).then((r) => r.json()).then((d) => ((d.flights || []) as Flight[]).slice().sort((a, b) => a.basePrice - b.basePrice));
+      })
+    ).then(setLegFlights).finally(() => setLoading(false));
+  }, [legsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pick = (i: number, flight: Flight, fare: FareOption) => {
+    const next = picks.map((p, idx) => (idx === i ? { flight, fare } : p));
+    setPicks(next);
+    setActive(next.findIndex((p) => !p)); // jump to the next unpicked leg (-1 = all done)
+  };
+
+  const allPicked = picks.every(Boolean);
+  const pax = Math.max(1, query.travellers.adults + query.travellers.children);
+  const fareTotal = picks.reduce((s, p) => s + (p ? p.fare.price : 0), 0) * pax;
+
+  const proceed = () => {
+    if (!allPicked) return;
+    setQuery(query);
+    setItinerary(picks as ItineraryLeg[]);
+    requireAuth(() => router.push("/flights/book"));
+  };
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-5 pb-28">
+      {legs.map((leg, i) => {
+        const picked = picks[i];
+        const isActive = active === i;
+        return (
+          <div key={i} className="mb-4 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
+            <button onClick={() => setActive(isActive ? -1 : i)} className="flex w-full items-center justify-between gap-3 p-4 text-left">
+              <div className="flex items-center gap-3">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{i + 1}</span>
+                <div>
+                  <p className="text-sm font-bold text-slate-900">{leg.label} · {leg.from} → {leg.to}</p>
+                  <p className="text-xs text-slate-400">{formatDate(leg.date)}{picked ? ` · ${picked.flight.airlineName} ${picked.flight.flightNumber} · ${money(picked.fare.price)} (${picked.fare.label})` : ""}</p>
+                </div>
+              </div>
+              {picked
+                ? <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-600"><Check size={13} /> {isActive ? "Change" : "Selected"}</span>
+                : <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-600">Choose a flight</span>}
+            </button>
+            {isActive && (
+              <div className="space-y-3 border-t border-slate-100 bg-slate-50/50 p-4">
+                {loading ? <div className="flex justify-center py-8 text-slate-400"><Loader2 className="animate-spin" /></div>
+                  : (legFlights[i] || []).length === 0 ? <p className="py-6 text-center text-sm text-slate-400">No flights found for this leg.</p>
+                  : (legFlights[i] || []).map((f) => (
+                    <FlightCard key={f.id} flight={f} query={query} onPick={(fl, fr) => pick(i, fl, fr)} selected={picked?.flight.id === f.id} selectedFareId={picked?.flight.id === f.id ? picked?.fare.id : undefined} />
+                  ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
+          <div>
+            <p className="text-xs text-slate-400">{picks.filter(Boolean).length} of {legs.length} flights selected</p>
+            <p className="text-lg font-extrabold text-slate-900">{money(fareTotal)} <span className="text-xs font-medium text-slate-400">· {pax} traveller{pax > 1 ? "s" : ""} · fares only</span></p>
+          </div>
+          <Button onClick={proceed} disabled={!allPicked}>Continue to book <ArrowRight size={16} /></Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function parseUrlQuery(sp: URLSearchParams): SearchQuery {
   return {
@@ -53,8 +170,12 @@ export function SearchResults() {
   const [showFilters, setShowFilters] = useState(false);
 
   const qs = sp.toString();
+  const urlQuery = useMemo(() => parseUrlQuery(sp), [qs]); // eslint-disable-line react-hooks/exhaustive-deps
+  const isMultiLeg = urlQuery.tripType === "ROUND_TRIP" || urlQuery.tripType === "MULTI_CITY";
+  const legs = useMemo(() => buildLegs(sp, urlQuery), [qs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (isMultiLeg) { setLoading(false); return; } // multi-leg fetches per leg in MultiLegResults
     setLoading(true);
     fetch(`/api/flights/search?${qs}`)
       .then((r) => r.json())
@@ -105,13 +226,15 @@ export function SearchResults() {
   };
 
   const q = data?.query;
-  const urlQuery = parseUrlQuery(sp);
 
   return (
     <>
     {/* MakeMyTrip-style editable modify-search bar under the header */}
     <ModifySearch query={urlQuery} />
 
+    {isMultiLeg ? (
+      <MultiLegResults legs={legs} query={urlQuery} />
+    ) : (
     <div className="mx-auto max-w-7xl px-4 py-5">
       {data && !data.live && (
         <div className="mb-3">
@@ -179,6 +302,7 @@ export function SearchResults() {
         </div>
       )}
     </div>
+    )}
     </>
   );
 }

@@ -64,6 +64,7 @@ export default function PaymentPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           flight: st.flight, fare: st.fare, query: st.query, passengers: st.passengers,
+          extraFlights: st.extraFlights, // return / multi-city legs beyond the first
           seats: st.seats, meals: st.meals, contactEmail: st.contactEmail, contactPhone: st.contactPhone,
           addOns: st.addOns, total, agentMarkup,
           customerState, serviceCharge: q.serviceCharge, gst: q.gst,

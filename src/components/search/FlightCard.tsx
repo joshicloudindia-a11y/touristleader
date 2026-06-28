@@ -34,7 +34,7 @@ function FareRow({ icon: Icon, text }: { icon: React.ElementType; text: string }
   );
 }
 
-export function FlightCard({ flight, query }: { flight: Flight; query: SearchQuery }) {
+export function FlightCard({ flight, query, onPick, selected, selectedFareId }: { flight: Flight; query: SearchQuery; onPick?: (flight: Flight, fare: FareOption) => void; selected?: boolean; selectedFareId?: string }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const money = useMoney();
@@ -43,6 +43,9 @@ export function FlightCard({ flight, query }: { flight: Flight; query: SearchQue
   const requireAuth = useAuth((s) => s.requireAuth);
 
   const choose = (fare: FareOption) => {
+    // Multi-leg selection mode (round trip / multi-city): hand the pick back to the
+    // parent instead of navigating, so the user can complete the other legs first.
+    if (onPick) { onPick(flight, fare); return; }
     setQuery(query);
     selectFlight(flight, fare);
     // Require login before starting the booking flow.
@@ -52,7 +55,7 @@ export function FlightCard({ flight, query }: { flight: Flight; query: SearchQue
   const stopsLabel = flight.stops === 0 ? "Non-stop" : `${flight.stops} stop${flight.stops > 1 ? "s" : ""}`;
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 transition-shadow hover:shadow-md">
+    <div className={cn("overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition-shadow hover:shadow-md", selected ? "ring-2 ring-brand" : "ring-slate-100")}>
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
         {/* Airline */}
         <div className="flex items-center gap-3 sm:w-44">
@@ -128,8 +131,8 @@ export function FlightCard({ flight, query }: { flight: Flight; query: SearchQue
                     <FareRow icon={RefreshCw} text={fare.cancellation} />
                   </ul>
                   <p className="mt-2 text-[11px] italic text-slate-400">{info.tagline}</p>
-                  <Button size="sm" className="mt-3 w-full" variant="accent" onClick={() => choose(fare)}>
-                    <Check size={14} /> Select
+                  <Button size="sm" className="mt-3 w-full" variant={selectedFareId === fare.id ? "primary" : "accent"} onClick={() => choose(fare)}>
+                    <Check size={14} /> {selectedFareId === fare.id ? "Selected" : onPick ? "Select this flight" : "Select"}
                   </Button>
                 </div>
               );

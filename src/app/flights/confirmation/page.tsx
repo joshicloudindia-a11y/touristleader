@@ -44,7 +44,7 @@ function Confirmation() {
   const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState("");
   const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const { flight, fare, query, passengers, contactEmail, contactPhone, addOns, customerState } = useBooking();
+  const { flight, fare, query, passengers, extraFlights, contactEmail, contactPhone, addOns, customerState } = useBooking();
   const { quote } = useBilling();
 
   useEffect(() => {
@@ -188,9 +188,10 @@ function Confirmation() {
           ${contactPhone ? `<div class="line">${contactPhone}</div>` : ""}
         </div>
         <div class="card"><h4>Flight Details</h4>
-          <div class="line"><b>${flight ? `${flight.airlineName} ${flight.flightNumber}` : "-"}</b></div>
+          <div class="line"><b>${extraFlights.length ? "Onward: " : ""}${flight ? `${flight.airlineName} ${flight.flightNumber}` : "-"}</b></div>
           <div class="line">${flightLine}</div>
           <div class="line">${flight ? `${formatDate(flight.departTime)} &middot; ${formatTime(flight.departTime)}` : "-"}</div>
+          ${extraFlights.map((e, idx) => `<div class="line" style="margin-top:6px"><b>${query?.tripType === "ROUND_TRIP" ? "Return" : `Flight ${idx + 2}`}: ${e.flight.airlineName} ${e.flight.flightNumber}</b></div><div class="line">${cityName(e.flight.from)} (${e.flight.from}) &rarr; ${cityName(e.flight.to)} (${e.flight.to}) &middot; ${formatDate(e.flight.departTime)}</div>`).join("")}
           <div class="line">${query?.cabinClass || "-"} &middot; ${fare?.label || "-"} &middot; ${pax} traveller${pax > 1 ? "s" : ""}</div>
         </div>
       </div>

@@ -17,10 +17,19 @@ export interface PassengerInput {
   meal?: string;
 }
 
+/** A picked flight + its fare for one itinerary leg (round-trip return / multi-city legs). */
+export interface ItineraryLeg {
+  flight: Flight;
+  fare: FareOption;
+}
+
 interface BookingState {
   query: SearchQuery | null;
   flight: Flight | null;
   fare: FareOption | null;
+  // Additional legs beyond the primary `flight` (return leg for round trips,
+  // legs 2..N for multi-city). Empty for one-way — keeps that flow unchanged.
+  extraFlights: ItineraryLeg[];
   passengers: PassengerInput[];
   contactEmail: string;
   contactPhone: string;
@@ -32,6 +41,7 @@ interface BookingState {
   agentMarkup: number; // agent's own service charge added at checkout (agent bookings only)
   setQuery: (q: SearchQuery) => void;
   selectFlight: (f: Flight, fare: FareOption) => void;
+  setItinerary: (legs: ItineraryLeg[]) => void;
   setPassengers: (p: PassengerInput[]) => void;
   setContact: (email: string, phone: string) => void;
   setSeat: (i: number, seat: string, price: number) => void;
@@ -41,6 +51,7 @@ interface BookingState {
   setCustomerState: (s: string) => void;
   setAgentMarkup: (n: number) => void;
   reset: () => void;
+  farePerPax: () => number; // combined per-passenger fare across all legs
   totalAmount: () => number;
 }
 
@@ -50,6 +61,7 @@ export const useBooking = create<BookingState>()(
       query: null,
       flight: null,
       fare: null,
+      extraFlights: [],
       passengers: [],
       contactEmail: "",
       contactPhone: "",
@@ -60,7 +72,10 @@ export const useBooking = create<BookingState>()(
       customerState: "",
       agentMarkup: 0,
       setQuery: (query) => set({ query }),
-      selectFlight: (flight, fare) => set({ flight, fare }),
+      // Single-leg selection (one-way) — clears any prior multi-leg itinerary.
+      selectFlight: (flight, fare) => set({ flight, fare, extraFlights: [] }),
+      // Multi-leg selection (round trip / multi-city): leg 0 is primary, rest are extras.
+      setItinerary: (legs) => set({ flight: legs[0]?.flight ?? null, fare: legs[0]?.fare ?? null, extraFlights: legs.slice(1) }),
       setPassengers: (passengers) => set({ passengers }),
       setContact: (contactEmail, contactPhone) => set({ contactEmail, contactPhone }),
       setSeat: (i, seat) => set((s) => ({ seats: { ...s.seats, [i]: seat } })),
@@ -70,12 +85,18 @@ export const useBooking = create<BookingState>()(
       setCustomerState: (customerState) => set({ customerState }),
       setAgentMarkup: (agentMarkup) => set({ agentMarkup }),
       reset: () =>
-        set({ flight: null, fare: null, passengers: [], seats: {}, meals: {}, addOns: 0, promoCode: "", agentMarkup: 0 }),
+        set({ flight: null, fare: null, extraFlights: [], passengers: [], seats: {}, meals: {}, addOns: 0, promoCode: "", agentMarkup: 0 }),
+      farePerPax: () => {
+        const { fare, extraFlights } = get();
+        if (!fare) return 0;
+        return fare.price + extraFlights.reduce((s, e) => s + e.fare.price, 0);
+      },
       totalAmount: () => {
-        const { fare, query, addOns } = get();
-        if (!fare || !query) return 0;
+        const { query, addOns } = get();
+        const per = get().farePerPax();
+        if (!per || !query) return 0;
         const pax = query.travellers.adults + query.travellers.children;
-        return fare.price * Math.max(1, pax) + addOns;
+        return per * Math.max(1, pax) + addOns;
       },
     }),
     { name: "tl-booking" }
