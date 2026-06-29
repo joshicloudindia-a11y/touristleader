@@ -1,5 +1,6 @@
 import { formatINR, formatDate, formatTime } from "./utils";
-import { AIRPORTS } from "./constants";
+import { AIRPORTS, MEALS } from "./constants";
+import { INFANT_FARE_RATE } from "./fare-rules";
 
 /** Who the invoice is billed to. Customer details for direct bookings, agency details for agent bookings. */
 export interface BillTo {
@@ -33,8 +34,12 @@ export interface InvoiceData {
   cabin?: string;
   fareLabel?: string;
   pax: number;
+  // Traveller names (with type/seat/meal) to list on the invoice.
+  travellers?: { name: string; type?: string; seat?: string; meal?: string }[];
   base: number;
   taxes: number;
+  infants?: number;
+  infantFare?: number;
   addOns: number;
   convenience: number;
   serviceCharge?: number;
@@ -71,6 +76,7 @@ export interface BookingLike {
   fareType?: string;
   adults: number;
   children: number;
+  infants?: number;
   baseFare: number;
   taxes: number;
   addOns: number;
@@ -83,7 +89,7 @@ export interface BookingLike {
   contactEmail: string;
   contactPhone: string;
   createdAt: string;
-  passengers?: { fullName?: string }[] | null;
+  passengers?: { fullName?: string; type?: string; seat?: string; seatId?: string; meal?: string }[] | null;
   flightData?: FlightDataLike | null;
   billTo?: BillTo; // attached server-side
 }
@@ -96,13 +102,23 @@ export function buildInvoiceDataFromBooking(b: BookingLike): InvoiceData {
   let base: number;
   let taxes = b.taxes || 0;
   let pax = Math.max(1, b.adults + b.children);
-  if (kind === "FLIGHT") { base = (b.baseFare || 0) * pax; taxes = (b.taxes || 0) * pax; }
+  let infantTotal = 0; const infants = b.infants || 0;
+  if (kind === "FLIGHT") {
+    base = (b.baseFare || 0) * pax; taxes = (b.taxes || 0) * pax;
+    infantTotal = Math.round(((b.baseFare || 0) + (b.taxes || 0)) * INFANT_FARE_RATE) * infants;
+  }
   else if (kind === "HOTEL") { base = (b.baseFare || 0) * (f.nights || 1); }
   else { base = b.baseFare || 0; pax = b.adults || f.seatIds?.length || 1; } // BUS: stored base is full seats fare
   const addOns = b.addOns || 0;
   const serviceCharge = b.serviceCharge || 0;
   const gstTotal = (b.igst || 0) + (b.cgst || 0) + (b.sgst || 0);
-  const convenience = Math.max(0, total - base - taxes - addOns - serviceCharge - gstTotal);
+  const convenience = Math.max(0, total - base - taxes - infantTotal - addOns - serviceCharge - gstTotal);
+  const travellers = (b.passengers || []).map((p) => ({
+    name: p.fullName || "Traveller",
+    type: p.type,
+    seat: p.seat || p.seatId,
+    meal: MEALS.find((m) => m.id === p.meal)?.label,
+  }));
 
   let detailsTitle = "Flight Details";
   let detailLines: string[];
@@ -138,8 +154,8 @@ export function buildInvoiceDataFromBooking(b: BookingLike): InvoiceData {
     ref: b.bookingRef, pnr: b.pnr || "—", kind, detailsTitle, detailLines,
     name: b.passengers?.[0]?.fullName || "Guest", email: b.contactEmail, phone: b.contactPhone,
     billTo: b.billTo,
-    dateLabel: formatDate(b.departDate), pax,
-    base, taxes, addOns, convenience, total,
+    dateLabel: formatDate(b.departDate), pax, travellers,
+    base, taxes, infants, infantFare: infantTotal, addOns, convenience, total,
     serviceCharge, igst: b.igst || 0, cgst: b.cgst || 0, sgst: b.sgst || 0,
     invDate: formatDate(b.createdAt),
   };
@@ -152,6 +168,7 @@ export function buildInvoiceHtml(d: InvoiceData, origin: string): string {
   const rows = [
     ["Base fare", `× ${d.pax} ${unitWord}${d.pax > 1 ? "s" : ""}`, formatINR(d.base)],
     ["Taxes & fees", "", formatINR(d.taxes)],
+    ...((d.infants || 0) > 0 ? [["Infant fare", `× ${d.infants}`, formatINR(d.infantFare || 0)]] : []),
     ...(d.addOns > 0 ? [["Add-ons", "", formatINR(d.addOns)]] : []),
     ...(d.convenience > 0 ? [["Convenience fee", "non-refundable", formatINR(d.convenience)]] : []),
     ...(d.serviceCharge && d.serviceCharge > 0 ? [["Service charge", "", formatINR(d.serviceCharge)]] : []),
@@ -159,6 +176,15 @@ export function buildInvoiceHtml(d: InvoiceData, origin: string): string {
     ...(d.cgst && d.cgst > 0 ? [["CGST", "", formatINR(d.cgst)]] : []),
     ...(d.sgst && d.sgst > 0 ? [["SGST", "", formatINR(d.sgst)]] : []),
   ];
+  const travellersBlock = d.travellers && d.travellers.length
+    ? `<h3>${kind === "HOTEL" ? "Guests" : "Travellers"}</h3>
+       <table>
+         <tbody>${d.travellers.map((p, i) => {
+           const extras = [p.seat ? `Seat ${p.seat}` : "", p.meal || ""].filter(Boolean).join(" &middot; ");
+           return `<tr><td>${i + 1}. ${p.name}${p.type ? `<span class="s">${p.type}</span>` : ""}</td><td class="r">${extras || "&mdash;"}</td></tr>`;
+         }).join("")}</tbody>
+       </table>`
+    : "";
   const detailsTitle = d.detailsTitle || (kind === "BUS" ? "Bus Details" : kind === "HOTEL" ? "Stay Details" : "Flight Details");
   const detailLines = d.detailLines || [
     `<b>${d.airline || "-"} ${d.flightNo || ""}</b>`,
@@ -224,6 +250,7 @@ export function buildInvoiceHtml(d: InvoiceData, origin: string): string {
           ${detailLines.map((l) => `<div class="line">${l}</div>`).join("")}
         </div>
       </div>
+      ${travellersBlock}
       <h3>Fare Breakdown</h3>
       <table>
         <thead><tr><td>Description</td><td class="r">Amount</td></tr></thead>

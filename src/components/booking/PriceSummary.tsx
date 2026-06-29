@@ -4,6 +4,7 @@ import { useBooking } from "@/store/booking";
 import { useAuth } from "@/store/auth";
 import { useBilling } from "@/lib/useBilling";
 import { promoDiscount } from "@/lib/offers";
+import { fareBreakdown } from "@/lib/fare-rules";
 import { formatINR } from "@/lib/utils";
 import { ShieldCheck } from "lucide-react";
 import { ServiceChargeLines, GstStateSelect } from "@/components/billing/Billing";
@@ -17,15 +18,15 @@ export function PriceSummary({ cta, editableState = true }: { cta?: React.ReactN
   useEffect(() => { if (editableState && !customerState && user?.state) setCustomerState(user.state); }, [user, customerState, editableState, setCustomerState]);
 
   if (!flight || !fare || !query) return null;
-  const pax = Math.max(1, query.travellers.adults + query.travellers.children);
   // Combined per-passenger fare across all legs (return / multi-city); 1 leg for one-way.
   const legCount = 1 + extraFlights.length;
   const perPax = fare.price + extraFlights.reduce((s, e) => s + e.fare.price, 0);
-  const base = Math.round(perPax * 0.82) * pax;
-  const taxes = perPax * pax - base;
+  // Adults + children pay the full fare; infants pay the reduced infant rate.
+  const fb = fareBreakdown(query.travellers, perPax);
+  const { paying: pax, base, taxes } = fb;
   const convenience = 299;
-  const discount = promoDiscount(promoCode, perPax * pax + addOns); // promo applies to fare + add-ons
-  const subtotal = perPax * pax + addOns + convenience - discount;
+  const discount = promoDiscount(promoCode, fb.fareTotal + addOns); // promo applies to fare + add-ons
+  const subtotal = fb.fareTotal + addOns + convenience - discount;
   const q = quote(subtotal, customerState);
   const total = subtotal + q.addon + agentMarkup;
 
@@ -33,7 +34,8 @@ export function PriceSummary({ cta, editableState = true }: { cta?: React.ReactN
     <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
       <h3 className="font-bold text-slate-900">Fare Summary</h3>
       <div className="mt-3 space-y-2 text-sm">
-        <Row label={`Base fare × ${pax}${legCount > 1 ? ` · ${legCount} flights` : ""}`} value={formatINR(base)} />
+        <Row label={`Base fare${query.travellers.children > 0 ? " (adult/child)" : ""} × ${pax}${legCount > 1 ? ` · ${legCount} flights` : ""}`} value={formatINR(base)} />
+        {fb.infants > 0 && <Row label={`Infant fare × ${fb.infants}`} value={formatINR(fb.infantTotal)} />}
         <Row label="Taxes & fees" value={formatINR(taxes)} />
         {addOns > 0 && <Row label="Add-ons (seats / meals)" value={formatINR(addOns)} />}
         <Row label="Convenience fee" value={formatINR(convenience)} />

@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Flight, FareOption, SearchQuery } from "@/lib/types";
+import { fareBreakdown } from "@/lib/fare-rules";
 
 export interface PassengerInput {
   fullName: string;
@@ -95,8 +96,8 @@ export const useBooking = create<BookingState>()(
         const { query, addOns } = get();
         const per = get().farePerPax();
         if (!per || !query) return 0;
-        const pax = query.travellers.adults + query.travellers.children;
-        return per * Math.max(1, pax) + addOns;
+        // Adults + children at full fare, infants at the reduced infant rate.
+        return fareBreakdown(query.travellers, per).fareTotal + addOns;
       },
     }),
     { name: "tl-booking" }

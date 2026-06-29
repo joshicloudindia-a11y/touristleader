@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X, Loader2, Check, ArrowRight } from "lucide-react";
 import type { Flight, FareOption, SearchQuery, TripType, CabinClass } from "@/lib/types";
 import { SORT_OPTIONS } from "@/lib/constants";
+import { fareBreakdown } from "@/lib/fare-rules";
 import { cn, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { useMoney } from "@/store/preferences";
@@ -73,8 +74,11 @@ function MultiLegResults({ legs, query }: { legs: Leg[]; query: SearchQuery }) {
   };
 
   const allPicked = picks.every(Boolean);
-  const pax = Math.max(1, query.travellers.adults + query.travellers.children);
-  const fareTotal = picks.reduce((s, p) => s + (p ? p.fare.price : 0), 0) * pax;
+  // Combined per-passenger fare across picked legs; infants billed at the reduced rate.
+  const perPaxPicked = picks.reduce((s, p) => s + (p ? p.fare.price : 0), 0);
+  const fb = fareBreakdown(query.travellers, perPaxPicked);
+  const travellerCount = query.travellers.adults + query.travellers.children + query.travellers.infants;
+  const fareTotal = fb.fareTotal;
 
   const proceed = () => {
     if (!allPicked) return;
@@ -119,7 +123,7 @@ function MultiLegResults({ legs, query }: { legs: Leg[]; query: SearchQuery }) {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
           <div>
             <p className="text-xs text-slate-400">{picks.filter(Boolean).length} of {legs.length} flights selected</p>
-            <p className="text-lg font-extrabold text-slate-900">{money(fareTotal)} <span className="text-xs font-medium text-slate-400">· {pax} traveller{pax > 1 ? "s" : ""} · fares only</span></p>
+            <p className="text-lg font-extrabold text-slate-900">{money(fareTotal)} <span className="text-xs font-medium text-slate-400">· {travellerCount} traveller{travellerCount > 1 ? "s" : ""} · fares only</span></p>
           </div>
           <Button onClick={proceed} disabled={!allPicked}>Continue to book <ArrowRight size={16} /></Button>
         </div>

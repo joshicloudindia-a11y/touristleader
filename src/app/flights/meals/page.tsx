@@ -68,14 +68,17 @@ export default function MealsPage() {
         <div className="mx-auto max-w-6xl px-4 py-6">
           <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-2 rounded-2xl bg-white p-3 shadow-sm">
-                {pax.map((name, i) => (
-                  <button key={i} onClick={() => setActive(i)}
-                    className={cn("rounded-xl border px-3 py-2 text-left text-sm", active === i ? "border-brand bg-brand/10" : "border-slate-200")}>
-                    <span className="block text-xs text-slate-400">{name}</span>
-                    <span className="font-semibold text-slate-800">{MEALS.find((m) => m.id === meals[i])?.label || "No meal"}</span>
-                  </button>
-                ))}
+              <div className="rounded-2xl bg-white p-3 shadow-sm">
+                {pax.length > 1 && <p className="mb-2 px-1 text-xs font-medium text-slate-500">Tap a traveller, then pick their meal — repeat for each passenger.</p>}
+                <div className="flex flex-wrap gap-2">
+                  {pax.map((name, i) => (
+                    <button key={i} onClick={() => setActive(i)}
+                      className={cn("rounded-xl border px-3 py-2 text-left text-sm", active === i ? "border-brand bg-brand/10" : "border-slate-200")}>
+                      <span className="block text-xs text-slate-400">{name || `Passenger ${i + 1}`}</span>
+                      <span className="font-semibold text-slate-800">{MEALS.find((m) => m.id === meals[i])?.label || "No meal"}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">

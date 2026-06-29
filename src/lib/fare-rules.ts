@@ -23,6 +23,43 @@ export function seatablePax(t: TravellerCount): number {
   return Math.max(1, t.adults + t.children);
 }
 
+/** Infants travel on a lap and pay a reduced fare — 10% of the adult fare. */
+export const INFANT_FARE_RATE = 0.1;
+
+/** Passengers billed at the full fare = adults + children (infants pay the reduced infant rate). */
+export function payingPax(t: TravellerCount): number {
+  return Math.max(1, t.adults + t.children);
+}
+
+/** Reduced fare for a single infant, given the full per-passenger (adult) fare. */
+export function infantFarePerHead(perPaxFare: number): number {
+  return Math.round(perPaxFare * INFANT_FARE_RATE);
+}
+
+/**
+ * Air-fare breakdown for a traveller mix, given the combined per-passenger (adult)
+ * fare across all legs. Adults & children pay the full fare; infants pay the reduced
+ * infant rate (lap, no seat). base/taxes use the same 82/18 split as the rest of the app.
+ */
+export function fareBreakdown(t: TravellerCount, perPaxFare: number) {
+  const paying = payingPax(t);
+  const infants = Math.max(0, t.infants || 0);
+  const base = Math.round(perPaxFare * 0.82) * paying;
+  const taxes = perPaxFare * paying - base;
+  const infantPer = infantFarePerHead(perPaxFare);
+  const infantTotal = infantPer * infants;
+  return {
+    paying,
+    infants,
+    infantPer,
+    infantTotal,
+    base,
+    taxes,
+    /** Total air fare across every passenger and leg (adults + children + infants). */
+    fareTotal: perPaxFare * paying + infantTotal,
+  };
+}
+
 /** Whole years between a date of birth and a reference date. */
 export function ageOnDate(dobISO: string, onISO: string): number {
   const b = new Date(dobISO);

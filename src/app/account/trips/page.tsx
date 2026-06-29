@@ -9,11 +9,12 @@ import { Modal } from "@/components/ui/Modal";
 import { AirlineLogo } from "@/components/AirlineLogo";
 import { useAuth } from "@/store/auth";
 import { formatINR, formatDate, formatTime, formatDuration, cn } from "@/lib/utils";
-import { AIRPORTS } from "@/lib/constants";
+import { AIRPORTS, MEALS } from "@/lib/constants";
+import { INFANT_FARE_RATE } from "@/lib/fare-rules";
 import { buildInvoiceHtml, buildInvoiceDataFromBooking, openInvoice, shareBooking, type BillTo } from "@/lib/invoice";
 
 type Kind = "FLIGHT" | "BUS" | "HOTEL";
-interface Pax { fullName?: string; idType?: string; idNumber?: string; gender?: string; seatId?: string; age?: string }
+interface Pax { fullName?: string; idType?: string; idNumber?: string; gender?: string; seatId?: string; age?: string; type?: string; seat?: string; meal?: string }
 interface FData {
   airlineCode?: string; airlineName?: string; flightNumber?: string; departTime?: string; arriveTime?: string; durationMinutes?: number; stops?: number; cabinBaggage?: string; checkInBaggage?: string;
   operator?: string; busType?: string; seatIds?: string[]; boarding?: { name?: string; time?: string }; dropping?: { name?: string }; date?: string;
@@ -60,14 +61,19 @@ export default function MyTripsPage() {
     const f = b.flightData || {}; const kind = kindOf(b); const total = b.totalAmount || 0;
     let base: number; let taxes = b.taxes || 0;
     let pax = Math.max(1, b.adults + b.children);
-    if (kind === "FLIGHT") { base = (b.baseFare || 0) * pax; taxes = (b.taxes || 0) * pax; }
+    let infantTotal = 0; const infants = b.infants || 0;
+    if (kind === "FLIGHT") {
+      base = (b.baseFare || 0) * pax; taxes = (b.taxes || 0) * pax;
+      // Infants pay the reduced infant rate on the combined per-pax fare.
+      infantTotal = Math.round(((b.baseFare || 0) + (b.taxes || 0)) * INFANT_FARE_RATE) * infants;
+    }
     else if (kind === "HOTEL") { base = (b.baseFare || 0) * (f.nights || 1); }
     else { base = b.baseFare || 0; pax = b.adults || f.seatIds?.length || 1; } // BUS: stored base is full seats fare
     const addOns = b.addOns || 0;
     const serviceCharge = b.serviceCharge || 0;
     const gstTotal = (b.igst || 0) + (b.cgst || 0) + (b.sgst || 0);
-    const convenience = Math.max(0, total - base - taxes - addOns - serviceCharge - gstTotal);
-    return { kind, pax, base, taxes, addOns, convenience, serviceCharge, igst: b.igst || 0, cgst: b.cgst || 0, sgst: b.sgst || 0, gstTotal, gstType: b.gstType, total };
+    const convenience = Math.max(0, total - base - taxes - infantTotal - addOns - serviceCharge - gstTotal);
+    return { kind, pax, base, taxes, infantTotal, infants, addOns, convenience, serviceCharge, igst: b.igst || 0, cgst: b.cgst || 0, sgst: b.sgst || 0, gstTotal, gstType: b.gstType, total };
   };
 
   // ---- title/route helpers ----
@@ -237,12 +243,19 @@ export default function MyTripsPage() {
                 <div className="mt-3">
                   <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-400"><Users size={13} /> {k === "HOTEL" ? "Guest" : "Travellers"}</p>
                   <div className="space-y-1.5">
-                    {b.passengers.map((p, i) => (
-                      <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                        <span className="font-semibold text-slate-800">{p.fullName || `Passenger ${i + 1}`}</span>
-                        <span className="text-xs text-slate-400">{p.seatId ? `Seat ${p.seatId}` : p.age ? `Age ${p.age}` : `${p.idType || ""} ${p.idNumber || ""}`}</span>
-                      </div>
-                    ))}
+                    {b.passengers.map((p, i) => {
+                      const seat = p.seat || p.seatId; // flights store seat; bus stores seatId
+                      const mealLabel = MEALS.find((mm) => mm.id === p.meal)?.label;
+                      const extras = k === "BUS"
+                        ? (seat ? `Seat ${seat}` : `${p.idType || ""} ${p.idNumber || ""}`.trim())
+                        : [seat ? `Seat ${seat}` : "", mealLabel || ""].filter(Boolean).join(" · ") || (p.age ? `Age ${p.age}` : `${p.idType || ""} ${p.idNumber || ""}`.trim());
+                      return (
+                        <div key={i} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                          <span className="font-semibold text-slate-800">{p.fullName || `Passenger ${i + 1}`}{p.type ? <span className="ml-1 text-xs font-normal text-slate-400">({p.type})</span> : null}</span>
+                          <span className="text-right text-xs text-slate-400">{extras || "—"}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -252,6 +265,7 @@ export default function MyTripsPage() {
                 <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-400">Fare summary</p>
                 <Row label={`Base fare${k === "FLIGHT" ? ` × ${m.pax}` : ""}`} value={formatINR(m.base)} />
                 <Row label="Taxes & fees" value={formatINR(m.taxes)} />
+                {m.infantTotal > 0 && <Row label={`Infant fare × ${m.infants}`} value={formatINR(m.infantTotal)} />}
                 {m.addOns > 0 && <Row label="Add-ons" value={formatINR(m.addOns)} />}
                 {m.convenience > 0 && <Row label="Convenience fee" value={formatINR(m.convenience)} />}
                 {m.serviceCharge > 0 && <Row label="Service charge" value={formatINR(m.serviceCharge)} />}

@@ -7,6 +7,8 @@ import { getSessionUser, isAdmin } from "@/lib/auth";
 import { getBillingConfig, walletTxn } from "@/lib/billing";
 import { computeCommission } from "@/lib/billing-core";
 import { attachBillTo } from "@/lib/invoice-billing";
+import { fareBreakdown, paxTypes } from "@/lib/fare-rules";
+import { MEALS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -120,6 +122,21 @@ export async function POST(req: NextRequest) {
     const lead = passengers?.[0]?.fullName || "Traveller";
     const sessionUser = await getSessionUser();
 
+    // Combined per-passenger fare across every leg (return / multi-city), and the
+    // adult/child/infant breakdown — the single source of truth for stored & emailed fares.
+    const perPaxAll = (fare.price || 0) + extraFlights.reduce((s: number, e: { fare?: { price?: number } }) => s + (e.fare?.price || 0), 0);
+    const fb = fareBreakdown(query.travellers, perPaxAll);
+    const types = paxTypes(query.travellers);
+    // Carry each traveller's chosen seat & meal on the passenger record so the
+    // ticket / email / My Trips can show them per-passenger (seats/meals are picked
+    // by seatable index = adults + children, matching the passenger form order).
+    const enrichedPassengers = (Array.isArray(passengers) ? passengers : []).map((p: { fullName?: string; [k: string]: unknown }, i: number) => ({
+      ...p,
+      type: types[i] || "Adult",
+      seat: (seats && seats[i]) || null,
+      meal: (meals && meals[i]) || null,
+    }));
+
     let saved = true;
     try {
       await prisma.booking.create({
@@ -140,8 +157,9 @@ export async function POST(req: NextRequest) {
           adults: query.travellers.adults,
           children: query.travellers.children,
           infants: query.travellers.infants,
-          baseFare: Math.round(fare.price * 0.82),
-          taxes: Math.round(fare.price * 0.18),
+          // Per-passenger unit base/taxes across all legs (combined for round-trip / multi-city).
+          baseFare: Math.round(perPaxAll * 0.82),
+          taxes: Math.round(perPaxAll * 0.18),
           addOns: body.addOns || 0,
           ...billingFields(body),
           totalAmount: total || fare.price,
@@ -153,7 +171,7 @@ export async function POST(req: NextRequest) {
           contactEmail,
           contactPhone: contactPhone || "",
           flightData: extraFlights.length ? { ...flight, extraFlights } : flight,
-          passengers: passengers || [],
+          passengers: enrichedPassengers,
           seats: seats || {},
           meals: meals || {},
         },
@@ -164,13 +182,11 @@ export async function POST(req: NextRequest) {
     }
 
     // fire-and-forget email (full details)
-    const pax = Math.max(1, query.travellers.adults + query.travellers.children);
     const travellers = query.travellers.adults + query.travellers.children + query.travellers.infants;
-    const base = Math.round(fare.price * 0.82) * pax;
-    const taxes = fare.price * pax - base;
     const addOnsAmt = body.addOns || 0;
-    const grand = total || fare.price * pax;
-    const convenience = Math.max(0, grand - fare.price * pax - addOnsAmt);
+    const grand = total || fb.fareTotal;
+    // Remaining over the air fare + add-ons is the convenience fee (+ any service charge / GST).
+    const convenience = Math.max(0, grand - fb.fareTotal - addOnsAmt);
     const tm = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
     const dur = flight.durationMinutes ? `${Math.floor(flight.durationMinutes / 60)}h ${String(flight.durationMinutes % 60).padStart(2, "0")}m` : "";
 
@@ -186,8 +202,15 @@ export async function POST(req: NextRequest) {
         airline: flight.airlineName, flightNumber: flight.flightNumber,
         stops: flight.stops || 0, durationLabel: dur,
         passengerName: lead, travellers, cabin: query.cabinClass, fareLabel: fare.label,
+        passengers: enrichedPassengers.map((p) => ({
+          name: (p.fullName as string) || "Traveller",
+          type: (p.type as string) || "Adult",
+          seat: (p.seat as string) || "",
+          meal: MEALS.find((m) => m.id === p.meal)?.label || "",
+        })),
         cabinBaggage: flight.cabinBaggage || "7 kg", checkInBaggage: flight.checkInBaggage || "15 kg",
-        base, taxes, addOns: addOnsAmt, convenience, total: grand,
+        base: fb.base, taxes: fb.taxes, infantFare: fb.infantTotal, infants: fb.infants,
+        addOns: addOnsAmt, convenience, total: grand,
       }),
     }).catch(() => {});
 

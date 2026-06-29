@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Download, CalendarPlus, Car, Share2, FileText, Mail, Luggage, ShieldAlert, Home, Check, Printer } from "lucide-react";
+import { CheckCircle2, Download, CalendarPlus, Car, Share2, FileText, Mail, Luggage, ShieldAlert, Home, Check, Printer, Users, Armchair, Utensils } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/Button";
@@ -11,7 +11,8 @@ import { Modal } from "@/components/ui/Modal";
 import { FlightSummaryCard } from "@/components/booking/FlightSummaryCard";
 import { useBooking } from "@/store/booking";
 import { useBilling } from "@/lib/useBilling";
-import { CABS, AIRPORT_SERVICES, AIRPORTS } from "@/lib/constants";
+import { CABS, AIRPORT_SERVICES, AIRPORTS, MEALS } from "@/lib/constants";
+import { fareBreakdown, paxTypes } from "@/lib/fare-rules";
 import { formatINR, formatDate, formatTime } from "@/lib/utils";
 
 const CONVENIENCE = 299;
@@ -44,7 +45,7 @@ function Confirmation() {
   const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState("");
   const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const { flight, fare, query, passengers, extraFlights, contactEmail, contactPhone, addOns, customerState } = useBooking();
+  const { flight, fare, query, passengers, extraFlights, seats, meals, contactEmail, contactPhone, addOns, customerState } = useBooking();
   const { quote } = useBilling();
 
   useEffect(() => {
@@ -61,13 +62,22 @@ function Confirmation() {
   if (!mounted) return null;
 
   // ---- fare math (mirrors the booking PriceSummary) ----
-  const pax = Math.max(1, (query?.travellers.adults || 1) + (query?.travellers.children || 0));
-  const farePrice = fare?.price || 0;
-  const base = Math.round(farePrice * 0.82) * pax;
-  const taxes = farePrice * pax - base;
-  const subtotal = farePrice * pax + (addOns || 0) + CONVENIENCE;
+  // Combined per-passenger fare across all legs (return / multi-city); infants pay the reduced rate.
+  const perPax = (fare?.price || 0) + extraFlights.reduce((s, e) => s + (e.fare?.price || 0), 0);
+  const fb = fareBreakdown(query?.travellers || { adults: 1, children: 0, infants: 0 }, perPax);
+  const { paying: pax, base, taxes } = fb;
+  const subtotal = fb.fareTotal + (addOns || 0) + CONVENIENCE;
   const q = quote(subtotal, customerState);
   const total = subtotal + q.addon;
+
+  // Each traveller with their type + chosen seat / meal (for the ticket "Travellers" list).
+  const types = query ? paxTypes(query.travellers) : [];
+  const travellerRows = (passengers || []).map((p, i) => ({
+    name: p.fullName || `Passenger ${i + 1}`,
+    type: types[i] || "Adult",
+    seat: seats[i] || "",
+    meal: MEALS.find((m) => m.id === meals[i])?.label || "",
+  }));
 
   // ---- Add to Calendar (.ics) ----
   const addToCalendar = () => {
@@ -126,6 +136,7 @@ function Confirmation() {
     const rows = [
       ["Base fare", `× ${pax} traveller${pax > 1 ? "s" : ""}`, formatINR(base)],
       ["Taxes & airport fees", "", formatINR(taxes)],
+      ...(fb.infants > 0 ? [["Infant fare", `× ${fb.infants}`, formatINR(fb.infantTotal)]] : []),
       ["Add-ons (seats / meals)", "", formatINR(addOns || 0)],
       ["Convenience fee", "non-refundable", formatINR(CONVENIENCE)],
       ...(q.serviceCharge > 0 ? [["Service charge", customerState ? `Billing: ${customerState}` : "", formatINR(q.serviceCharge)]] : []),
@@ -262,6 +273,25 @@ function Confirmation() {
 
           <div className="mt-4"><FlightSummaryCard /></div>
 
+          {/* Travellers — all passengers by name, with their seat & meal */}
+          {travellerRows.length > 0 && (
+            <div className="mt-4 rounded-xl bg-slate-50 p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-400"><Users size={13} /> Travellers</p>
+              <div className="space-y-1.5">
+                {travellerRows.map((p, i) => (
+                  <div key={i} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-slate-100">
+                    <span className="font-semibold text-slate-800">{p.name} <span className="text-xs font-normal text-slate-400">({p.type})</span></span>
+                    <span className="flex items-center gap-3 text-xs text-slate-500">
+                      {p.seat && <span className="flex items-center gap-1"><Armchair size={12} /> {p.seat}</span>}
+                      {p.meal && <span className="flex items-center gap-1"><Utensils size={12} /> {p.meal}</span>}
+                      {!p.seat && !p.meal && <span className="text-slate-300">No seat / meal</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {contactEmail && (
             <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
               <Mail size={15} /> Ticket & invoice emailed to {contactEmail}
@@ -348,6 +378,7 @@ function Confirmation() {
         <div className="mt-3 space-y-2 text-sm">
           <Row label={`Base fare × ${pax}`} value={formatINR(base)} />
           <Row label="Taxes & fees" value={formatINR(taxes)} />
+          {fb.infants > 0 && <Row label={`Infant fare × ${fb.infants}`} value={formatINR(fb.infantTotal)} />}
           <Row label="Add-ons (seats / meals)" value={formatINR(addOns || 0)} />
           <Row label="Convenience fee" value={formatINR(CONVENIENCE)} />
           {q.serviceCharge > 0 && <Row label="Service charge" value={formatINR(q.serviceCharge)} />}

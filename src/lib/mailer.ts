@@ -507,8 +507,9 @@ export function bookingEmailHtml(data: {
   airline: string; flightNumber: string;
   stops: number; durationLabel: string;
   passengerName: string; travellers: number; cabin: string; fareLabel: string;
+  passengers?: { name: string; type: string; seat?: string; meal?: string }[];
   cabinBaggage: string; checkInBaggage: string;
-  base: number; taxes: number; addOns: number; convenience: number; total: number;
+  base: number; taxes: number; infantFare?: number; infants?: number; addOns: number; convenience: number; total: number;
 }) {
   const fromCity = cityName(data.origin), toCity = cityName(data.destination);
   const stopsLbl = data.stops === 0 ? "Non-stop" : `${data.stops} stop${data.stops > 1 ? "s" : ""}`;
@@ -530,10 +531,31 @@ export function bookingEmailHtml(data: {
 
   const details = `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">
-      <tr><td style="padding:4px 0;color:#64748b">Lead passenger</td><td align="right" style="font-weight:600">${data.passengerName}</td></tr>
       <tr><td style="padding:4px 0;color:#64748b">Travellers</td><td align="right" style="font-weight:600">${data.travellers}</td></tr>
       <tr><td style="padding:4px 0;color:#64748b">Baggage</td><td align="right" style="font-weight:600">Cabin ${data.cabinBaggage} &middot; Check-in ${data.checkInBaggage}</td></tr>
     </table>`;
+
+  // Every traveller by name, with their type and any chosen seat / meal.
+  const paxList = data.passengers && data.passengers.length
+    ? `${sectionTitle("Travellers")}
+       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">
+         ${data.passengers.map((p, i) => {
+           const extras = [p.seat ? `Seat ${p.seat}` : "", p.meal || ""].filter(Boolean).join(" &middot; ");
+           return `<tr>
+             <td style="padding:5px 0;color:#0f172a;font-weight:600">${i + 1}. ${p.name} <span style="color:#94a3b8;font-weight:400">(${p.type})</span></td>
+             <td align="right" style="padding:5px 0;color:#64748b">${extras || "&mdash;"}</td>
+           </tr>`;
+         }).join("")}
+       </table>`
+    : "";
+
+  const fareRows: [string, string][] = [
+    [`Base fare (${data.travellers - (data.infants || 0)} traveller${data.travellers - (data.infants || 0) > 1 ? "s" : ""})`, inr(data.base)],
+    ["Taxes & fees", inr(data.taxes)],
+    ...((data.infants || 0) > 0 ? [[`Infant fare (${data.infants})`, inr(data.infantFare || 0)] as [string, string]] : []),
+    ...(data.addOns ? [["Add-ons (seats / meals)", inr(data.addOns)] as [string, string]] : []),
+    ["Convenience fee", inr(data.convenience)],
+  ];
 
   const inner = `
     ${refBar("Booking ID", data.bookingRef, "PNR", data.pnr)}
@@ -541,8 +563,9 @@ export function bookingEmailHtml(data: {
     ${sectionTitle("Flight")}
     ${journey}
     ${details}
+    ${paxList}
     ${sectionTitle("Fare breakdown")}
-    ${fareTable([[`Base fare (${data.travellers} traveller${data.travellers > 1 ? "s" : ""})`, inr(data.base)], ["Taxes & fees", inr(data.taxes)], ...(data.addOns ? [["Add-ons (seats / meals)", inr(data.addOns)] as [string, string]] : []), ["Convenience fee", inr(data.convenience)]], data.total)}
+    ${fareTable(fareRows, data.total)}
     ${sectionTitle("Good to know")}
     <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">Carry a valid government photo ID (Aadhaar / PAN / Passport / DL). Web check-in opens 48 hours before departure. Airline cancellation rules apply; convenience fee is non-refundable.</p>`;
 
