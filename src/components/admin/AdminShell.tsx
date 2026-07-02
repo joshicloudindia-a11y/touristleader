@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { LayoutDashboard, Palmtree, Loader2, ShieldAlert, ExternalLink, LogOut, Mail, ArrowLeft, ShieldCheck, AlertCircle, Ticket, LifeBuoy, Users, UserCheck, ReceiptText, Menu, SlidersHorizontal, Wallet, Headset, FileText, Banknote, Store, Umbrella } from "lucide-react";
+import { LayoutDashboard, Palmtree, Loader2, ShieldAlert, ExternalLink, LogOut, Mail, ArrowLeft, ShieldCheck, AlertCircle, Ticket, LifeBuoy, Users, UsersRound, UserCheck, ReceiptText, Menu, SlidersHorizontal, Wallet, Headset, FileText, FilePlus2, Banknote, Store, Umbrella } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { type Permission } from "@/lib/rbac";
@@ -15,8 +15,10 @@ import { Footer } from "@/components/Footer";
 const NAV: { seg: string; label: string; agentLabel?: string; icon: React.ElementType; perm: Permission }[] = [
   { seg: "", label: "Dashboard", agentLabel: "My Workspace", icon: LayoutDashboard, perm: "dashboard.view" },
   { seg: "bookings", label: "Bookings", icon: ReceiptText, perm: "bookings.view" },
+  { seg: "invoices", label: "Manual Invoices", agentLabel: "Invoices", icon: FilePlus2, perm: "bookings.view" },
   { seg: "packages", label: "Holiday Packages", icon: Palmtree, perm: "packages.view" },
   { seg: "enquiries", label: "Package Enquiries", agentLabel: "Leads", icon: Ticket, perm: "enquiries.view" },
+  { seg: "group-enquiries", label: "Group Bookings", agentLabel: "Group Queries", icon: UsersRound, perm: "enquiries.view" },
   { seg: "visa-enquiries", label: "Visa Enquiries", icon: FileText, perm: "enquiries.view" },
   { seg: "forex-enquiries", label: "Forex Enquiries", icon: Banknote, perm: "enquiries.view" },
   { seg: "partner-enquiries", label: "Partner Enquiries", icon: Store, perm: "enquiries.view" },

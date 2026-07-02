@@ -56,15 +56,20 @@ export default function AdminSettingsPage() {
                   <div className="flex gap-2">
                     {(["FLAT", "PERCENT"] as const).map((t) => (
                       <button key={t} onClick={() => set("serviceChargeType", t)} className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold", cfg.serviceChargeType === t ? "border-brand bg-brand/10 text-brand" : "border-slate-200 text-slate-600")}>
-                        {t === "FLAT" ? <><IndianRupee size={14} /> Flat ₹</> : <><Percent size={14} /> % of fare</>}
+                        {t === "FLAT" ? <><IndianRupee size={14} /> Flat ₹ / pax</> : <><Percent size={14} /> % of total</>}
                       </button>
                     ))}
                   </div>
                 </L>
-                <L label={cfg.serviceChargeType === "FLAT" ? "Amount (₹)" : "Percent (%)"}>
+                <L label={cfg.serviceChargeType === "FLAT" ? "Amount (₹ per passenger)" : "Percent (%) of total"}>
                   <input type="number" min={0} step={cfg.serviceChargeType === "FLAT" ? 1 : 0.1} value={cfg.serviceChargeValue} onChange={(e) => set("serviceChargeValue", Number(e.target.value))} className="inp" />
                 </L>
               </div>
+              <p className="mt-2 text-xs text-slate-500">
+                {cfg.serviceChargeType === "FLAT"
+                  ? <><b>Flat</b> — charged <b>per passenger</b>. e.g. ₹{cfg.serviceChargeValue || 0} × 2 passengers = {formatINR((cfg.serviceChargeValue || 0) * 2)}.</>
+                  : <><b>Percent</b> — {cfg.serviceChargeValue || 0}% of the <b>total</b> booking amount.</>}
+              </p>
             </Card>
 
             {/* GST */}

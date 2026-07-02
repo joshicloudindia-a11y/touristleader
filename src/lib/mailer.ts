@@ -355,6 +355,49 @@ export async function sendVisaEnquiryEmails(e: {
   return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
 }
 
+export async function sendGroupEnquiryEmails(e: {
+  enquiryNo: string; tripType: string; origin: string; destination: string; departDate: string; returnDate?: string;
+  cabinClass: string; travellers: number; adults: number; children: number; infants: number; passengerNames: string[];
+  name: string; email: string; phone: string; company?: string; message?: string;
+}) {
+  const inbox = process.env.SUPPORT_EMAIL || process.env.SMTP_USER!;
+  const route = `${e.origin} → ${e.destination}`;
+  const dates = `${e.departDate}${e.returnDate ? ` → ${e.returnDate}` : ""}`;
+  const mix = `${e.adults} adult${e.adults !== 1 ? "s" : ""}${e.children ? `, ${e.children} child${e.children !== 1 ? "ren" : ""}` : ""}${e.infants ? `, ${e.infants} infant${e.infants !== 1 ? "s" : ""}` : ""}`;
+  const namesRows = e.passengerNames.length
+    ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b;vertical-align:top">Passenger names</td><td>${e.passengerNames.map((n, i) => `${i + 1}. ${n}`).join("<br/>")}</td></tr>`
+    : "";
+  const team = `<div style="font-family:Arial,sans-serif;max-width:560px">${brandBar()}
+    <h2 style="color:#0b63d6">New Group Booking Query · ${e.enquiryNo}</h2>
+    <table style="font-size:14px">
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Trip</td><td><b>${e.tripType === "ROUND_TRIP" ? "Round trip" : "One way"}</b> · ${route}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Dates</td><td>${dates}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Cabin</td><td>${e.cabinClass}</td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Travellers</td><td><b>${e.travellers}</b> (${mix})</td></tr>
+      ${e.company ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">Organisation</td><td>${e.company}</td></tr>` : ""}
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Contact</td><td>${e.name} · ${e.email} · ${e.phone}</td></tr>
+      ${namesRows}
+    </table>
+    ${e.message ? `<p style="margin-top:12px;background:#f8fafc;padding:12px;border-radius:8px">${e.message}</p>` : ""}</div>`;
+
+  const inner = `
+    ${refBar("Query No.", e.enquiryNo, "Travellers", String(e.travellers))}
+    <p style="margin:0 0 10px;color:#475569;font-size:14px">Hi ${e.name}, thanks for your group booking query for <b>${route}</b>. Our group desk will get back to you with the best fares and a held-seat quote shortly.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">
+      <tr><td style="padding:4px 0;color:#64748b">Trip</td><td align="right" style="font-weight:600">${e.tripType === "ROUND_TRIP" ? "Round trip" : "One way"}</td></tr>
+      <tr><td style="padding:4px 0;color:#64748b">Dates</td><td align="right" style="font-weight:600">${dates}</td></tr>
+      <tr><td style="padding:4px 0;color:#64748b">Travellers</td><td align="right" style="font-weight:600">${mix}</td></tr>
+    </table>
+    ${sectionTitle("What's next")}
+    <p style="margin:0;color:#64748b;font-size:13px;line-height:1.7">Our group desk will contact you with fares, bulk discounts and a part-payment option to hold seats. You can also call us at +91 9987-495-897.</p>`;
+
+  const r = await Promise.all([
+    deliver({ to: inbox, replyTo: e.email, subject: `Group Query ${e.enquiryNo} · ${route}`, html: team, transactional: true }),
+    deliver({ to: e.email, subject: `We've got your group booking query — ${route} (${e.enquiryNo})`, html: emailShell({ title: "Group Booking Query Received", sub: route }, inner), transactional: true }),
+  ]);
+  return r.some((x) => "error" in x) ? { error: "partial failure" } : { ok: true };
+}
+
 export async function sendInsuranceEnquiryEmails(e: {
   enquiryNo: string; typeLabel: string; name: string; email: string; phone: string;
   city?: string; detailLines?: string[]; message?: string;

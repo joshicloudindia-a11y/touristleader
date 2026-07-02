@@ -18,7 +18,7 @@ export const TRIP_TYPES = [
   { id: "ONE_WAY", label: "One Way", info: "Book a flight for a single journey from origin to destination with no return date." },
   { id: "ROUND_TRIP", label: "Round Trip", info: "Book both departure and return flights together to save more and simplify planning." },
   { id: "MULTI_CITY", label: "Multi City", info: "Plan complex itineraries with multiple destinations in one booking. Ideal for business travel, long vacations, and international trips." },
-  { id: "GROUP_BOOKING", label: "Group Booking", badge: "New", info: "Booking for 9 or more travellers? Unlock attractive bulk discounts, flexible part-payment to reserve seats, and flexibility in passenger names." },
+  { id: "GROUP_BOOKING", label: "Group Booking", badge: "New", info: "Booking for 10 or more travellers? Send a group query to unlock attractive bulk discounts, flexible part-payment to reserve seats, and flexibility in passenger names." },
 ] as const;
 
 export const GROUP_BOOKING_PERKS = [

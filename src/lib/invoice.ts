@@ -86,10 +86,19 @@ export interface BookingLike {
   igst?: number;
   cgst?: number;
   sgst?: number;
+  // --- Agent attribution + earnings (for the B2B / commission invoice) ---
+  bookedByAgentId?: string | null;
+  agentMarkup?: number;
+  commission?: number;
+  commissionGst?: number;
   contactEmail: string;
   contactPhone: string;
   createdAt: string;
-  passengers?: { fullName?: string; type?: string; seat?: string; seatId?: string; meal?: string }[] | null;
+  passengers?: {
+    fullName?: string; type?: string; seat?: string; seatId?: string; meal?: string;
+    // Per-leg SSR (onward + return / multi-city) attached at booking time.
+    ssr?: { leg: number; label: string; seat?: string | null; meal?: string | null }[];
+  }[] | null;
   flightData?: FlightDataLike | null;
   billTo?: BillTo; // attached server-side
 }
@@ -113,12 +122,17 @@ export function buildInvoiceDataFromBooking(b: BookingLike): InvoiceData {
   const serviceCharge = b.serviceCharge || 0;
   const gstTotal = (b.igst || 0) + (b.cgst || 0) + (b.sgst || 0);
   const convenience = Math.max(0, total - base - taxes - infantTotal - addOns - serviceCharge - gstTotal);
-  const travellers = (b.passengers || []).map((p) => ({
-    name: p.fullName || "Traveller",
-    type: p.type,
-    seat: p.seat || p.seatId,
-    meal: MEALS.find((m) => m.id === p.meal)?.label,
-  }));
+  const mealLabel = (id?: string | null) => MEALS.find((m) => m.id === id)?.label || id || undefined;
+  const travellers = (b.passengers || []).map((p) => {
+    const ssr = Array.isArray(p.ssr) ? p.ssr : [];
+    if (ssr.length) {
+      // Round-trip / multi-city: list the seat & meal for each flight (e.g. "Onward 12A, Return 4C").
+      const seat = ssr.filter((s) => s.seat).map((s) => (s.label ? `${s.label} ${s.seat}` : `${s.seat}`)).join(", ");
+      const meal = ssr.filter((s) => s.meal).map((s) => (s.label ? `${s.label} ${mealLabel(s.meal)}` : `${mealLabel(s.meal)}`)).join(", ");
+      return { name: p.fullName || "Traveller", type: p.type, seat: seat || undefined, meal: meal || undefined };
+    }
+    return { name: p.fullName || "Traveller", type: p.type, seat: p.seat || p.seatId, meal: mealLabel(p.meal) };
+  });
 
   let detailsTitle = "Flight Details";
   let detailLines: string[];
@@ -265,6 +279,150 @@ export function buildInvoiceHtml(d: InvoiceData, origin: string): string {
   </div>
   <script>window.onload=function(){setTimeout(function(){window.print()},350)}</script>
 </body></html>`;
+}
+
+// Shared branded invoice CSS (matches buildInvoiceHtml / the confirmation invoice).
+const INVOICE_CSS = `
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#1e293b;background:#f1f5f9;padding:28px}
+  .inv{max-width:760px;margin:auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(2,6,23,.10)}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:30px 34px;background:linear-gradient(135deg,#0a4fa8 0%,#0b63d6 55%,#38bdf8 100%);color:#fff}
+  .brand{display:flex;align-items:center;gap:13px}
+  .brand img{width:50px;height:50px;border-radius:50%;background:#fff;padding:3px;object-fit:contain}
+  .brand .name{font-size:23px;font-weight:800;letter-spacing:-.5px;line-height:1}
+  .brand .sub{font-size:12px;opacity:.9;margin-top:5px}
+  .meta{text-align:right;line-height:1.5}
+  .meta .lbl{opacity:.85;font-size:10px;text-transform:uppercase;letter-spacing:1px}
+  .meta .val{font-weight:700;font-size:16px}
+  .paid{display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.55);padding:4px 13px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:1px}
+  .body{padding:26px 34px}
+  .cards{display:flex;gap:16px;flex-wrap:wrap}
+  .card{flex:1;min-width:230px;background:#f8fafc;border:1px solid #e8edf3;border-radius:13px;padding:16px}
+  .card h4{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:9px}
+  .card .line{font-size:13px;margin:4px 0;color:#334155}
+  .card .line b{color:#0f172a}
+  h3{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:#475569;margin:26px 0 6px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  thead td{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;border-bottom:2px solid #e2e8f0;padding:9px 0}
+  tbody td{padding:11px 0;border-bottom:1px solid #f1f5f9}
+  tbody td .s{color:#94a3b8;font-size:12px;margin-left:6px}
+  .r{text-align:right;font-variant-numeric:tabular-nums}
+  .total{display:flex;justify-content:space-between;align-items:center;margin-top:18px;background:linear-gradient(135deg,#0b63d6,#38bdf8);color:#fff;border-radius:13px;padding:15px 20px}
+  .total .t1{font-weight:600;font-size:14px}
+  .total .t2{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums}
+  .foot{padding:18px 34px;background:#f8fafc;border-top:1px solid #e8edf3;font-size:11px;color:#94a3b8;line-height:1.7}
+  @media print{body{background:#fff;padding:0}.inv{box-shadow:none;border-radius:0}}`;
+
+function invoiceHead(title: string) {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>${INVOICE_CSS}</style></head><body>`;
+}
+function invoiceBrandTop(subtitle: string, metaRows: string, badge = "PAID") {
+  return `<div class="top">
+      <div class="brand">
+        <img src="__ORIGIN__/logo.avif" alt="Tourist Leader"/>
+        <div><div class="name">Tourist Leader</div><div class="sub">${subtitle}</div></div>
+      </div>
+      <div class="meta">${metaRows}<div class="paid">&#9679; ${badge}</div></div>
+    </div>`;
+}
+const printScript = `<script>window.onload=function(){setTimeout(function(){window.print()},350)}</script></body></html>`;
+
+/**
+ * Agent-facing B2B / commission invoice for an agent booking: bills the agency and
+ * lists the agent's own service charge + platform commission (+ GST) = their earnings.
+ */
+export function buildAgentB2BInvoiceHtml(b: BookingLike, origin: string): string {
+  const kind = ((b.bookingType as InvoiceData["kind"]) || "FLIGHT") as "FLIGHT" | "BUS" | "HOTEL";
+  const markup = b.agentMarkup || 0;
+  const commission = b.commission || 0;
+  const commissionGst = b.commissionGst || 0;
+  const earnings = markup + commission + commissionGst;
+  const rows = [
+    ...(markup > 0 ? [["Agent service charge", "your markup on this booking", formatINR(markup)]] : []),
+    ["Platform commission", "on the fare (excl. your markup)", formatINR(commission)],
+    ...(commissionGst > 0 ? [["GST on commission", "", formatINR(commissionGst)]] : []),
+  ];
+  const meta = `<div class="lbl">Booking ID</div><div class="val">${b.bookingRef}</div>
+    <div class="lbl" style="margin-top:8px">${PNR_LABEL[kind]}</div><div class="val">${b.pnr || "—"}</div>`;
+  const agency = b.billTo;
+  return `${invoiceHead(`Agent Invoice ${b.bookingRef}`)}
+  <div class="inv">
+    ${invoiceBrandTop("Agent B2B statement · commission &amp; service charge", meta, "B2B").replace("__ORIGIN__", origin)}
+    <div class="body">
+      <div class="cards">
+        <div class="card"><h4>${agency?.label || "Agent"}</h4>
+          <div class="line"><b>${agency?.name || "Agent"}</b></div>
+          ${(agency?.lines || []).map((l) => `<div class="line">${l}</div>`).join("")}
+        </div>
+        <div class="card"><h4>Booking</h4>
+          <div class="line"><b>${cityName(b.origin)} (${b.origin}) &rarr; ${cityName(b.destination)} (${b.destination})</b></div>
+          <div class="line">${formatDate(b.departDate)} &middot; ${b.cabinClass}</div>
+          <div class="line">${Math.max(1, b.adults + b.children)} traveller${Math.max(1, b.adults + b.children) > 1 ? "s" : ""} &middot; Booking total ${formatINR(b.totalAmount || 0)}</div>
+        </div>
+      </div>
+      <h3>Your earnings on this booking</h3>
+      <table>
+        <thead><tr><td>Description</td><td class="r">Amount</td></tr></thead>
+        <tbody>${rows.map((r) => `<tr><td>${r[0]}<span class="s">${r[1]}</span></td><td class="r">${r[2]}</td></tr>`).join("")}</tbody>
+      </table>
+      <div class="total"><span class="t1">Total credited to agent wallet</span><span class="t2">${formatINR(earnings)}</span></div>
+    </div>
+    <div class="foot">
+      Invoice date: ${formatDate(b.createdAt)} &nbsp;&middot;&nbsp; B2B statement for the agent's records. Commission &amp; service charge are credited to the agent's Tourist Leader wallet and settled per the payout cycle.<br/>
+      &copy; ${new Date().getFullYear()} Tourist Leader.com
+    </div>
+  </div>
+  ${printScript}`;
+}
+
+/** A manual invoice created by an agent — arbitrary line items billed to any party. */
+export interface ManualInvoiceInput {
+  invoiceNo: string;
+  invDate: string;
+  billTo: { name: string; lines: string[] };
+  reference?: string; // booking ref / PNR / note shown in the details card
+  detailsTitle?: string;
+  detailLines?: string[];
+  items: { desc: string; note?: string; amount: number }[];
+  extraLines?: { label: string; amount: number }[]; // service charge, GST, discount (negative)
+  note?: string;
+}
+
+/** Branded, print-ready HTML for a manual invoice. */
+export function buildManualInvoiceHtml(d: ManualInvoiceInput, origin: string): string {
+  const subtotal = d.items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const extras = d.extraLines || [];
+  const total = subtotal + extras.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const itemRows = d.items.map((i) => `<tr><td>${i.desc || "Item"}<span class="s">${i.note || ""}</span></td><td class="r">${formatINR(i.amount)}</td></tr>`).join("");
+  const extraRows = extras.map((e) => `<tr><td>${e.label}</td><td class="r">${formatINR(e.amount)}</td></tr>`).join("");
+  const meta = `<div class="lbl">Invoice No.</div><div class="val">${d.invoiceNo}</div>
+    ${d.reference ? `<div class="lbl" style="margin-top:8px">Reference</div><div class="val">${d.reference}</div>` : ""}`;
+  const detailCard = d.detailLines && d.detailLines.length
+    ? `<div class="card"><h4>${d.detailsTitle || "Details"}</h4>${d.detailLines.map((l) => `<div class="line">${l}</div>`).join("")}</div>`
+    : "";
+  return `${invoiceHead(`Invoice ${d.invoiceNo}`)}
+  <div class="inv">
+    ${invoiceBrandTop("Comfort before, during, and after take off", meta, "INVOICE").replace("__ORIGIN__", origin)}
+    <div class="body">
+      <div class="cards">
+        <div class="card"><h4>Billed To</h4>
+          <div class="line"><b>${d.billTo.name || "Customer"}</b></div>
+          ${(d.billTo.lines || []).filter(Boolean).map((l) => `<div class="line">${l}</div>`).join("")}
+        </div>
+        ${detailCard}
+      </div>
+      <h3>Items</h3>
+      <table>
+        <thead><tr><td>Description</td><td class="r">Amount</td></tr></thead>
+        <tbody>${itemRows}<tr><td><b>Subtotal</b></td><td class="r"><b>${formatINR(subtotal)}</b></td></tr>${extraRows}</tbody>
+      </table>
+      <div class="total"><span class="t1">Total</span><span class="t2">${formatINR(total)}</span></div>
+    </div>
+    <div class="foot">
+      Invoice date: ${d.invDate} &nbsp;&middot;&nbsp; ${d.note ? d.note + " &middot; " : ""}Computer-generated invoice; no signature required. &copy; ${new Date().getFullYear()} Tourist Leader.com
+    </div>
+  </div>
+  ${printScript}`;
 }
 
 export function openInvoice(html: string, ref: string) {

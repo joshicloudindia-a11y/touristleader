@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeftRight, Search, Sparkles, Plus, X, Check } from "lucide-react";
+import { ArrowLeftRight, Search, Sparkles, Plus, X, Check, Users } from "lucide-react";
 import { TRIP_TYPES, AIRLINES } from "@/lib/constants";
 import type { CabinClass, TravellerCount, TripType } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -93,7 +93,12 @@ export function SearchWidget() {
     params.set("infants", String(travellers.infants));
     if (airline.trim()) params.set("airline", resolveAirline(airline));
     if (nonStop) params.set("nonstop", "1");
-    if (group) params.set("group", "1");
+
+    // Group booking (10+ travellers) is handled as a query/lead, not an instant search.
+    if (group) {
+      router.push(`/flights/group?${params.toString()}`);
+      return;
+    }
 
     router.push(`/flights/search?${params.toString()}`);
   };
@@ -252,7 +257,7 @@ export function SearchWidget() {
 
       {/* Search button straddling bottom edge */}
       <button onClick={search} className="absolute -bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-gradient-to-r from-brand to-sky-500 px-14 py-4 text-lg font-bold tracking-wide text-white shadow-xl shadow-brand/30 transition-transform hover:scale-[1.03] active:scale-95">
-        <Search size={18} /> {tx("btn_search")}
+        {group ? <><Users size={18} /> {tx("btn_groupQuery")}</> : <><Search size={18} /> {tx("btn_search")}</>}
       </button>
     </div>
   );

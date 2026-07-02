@@ -67,16 +67,24 @@ function Confirmation() {
   const fb = fareBreakdown(query?.travellers || { adults: 1, children: 0, infants: 0 }, perPax);
   const { paying: pax, base, taxes } = fb;
   const subtotal = fb.fareTotal + (addOns || 0) + CONVENIENCE;
-  const q = quote(subtotal, customerState);
+  // FLAT service charge is per passenger (all travellers on the booking).
+  const paxCount = query ? query.travellers.adults + query.travellers.children + query.travellers.infants : pax;
+  const q = quote(subtotal, customerState, paxCount);
   const total = subtotal + q.addon;
 
-  // Each traveller with their type + chosen seat / meal (for the ticket "Travellers" list).
+  // Each traveller with their type + chosen seat / meal PER FLIGHT (onward + return / multi-city).
   const types = query ? paxTypes(query.travellers) : [];
+  const legCount = 1 + extraFlights.length;
+  const legLabelOf = (leg: number) =>
+    legCount === 1 ? "" : query?.tripType === "ROUND_TRIP" ? (leg === 0 ? "Onward" : "Return") : `Flight ${leg + 1}`;
   const travellerRows = (passengers || []).map((p, i) => ({
     name: p.fullName || `Passenger ${i + 1}`,
     type: types[i] || "Adult",
-    seat: seats[i] || "",
-    meal: MEALS.find((m) => m.id === meals[i])?.label || "",
+    legs: Array.from({ length: legCount }, (_, leg) => ({
+      label: legLabelOf(leg),
+      seat: seats[leg]?.[i] || "",
+      meal: MEALS.find((m) => m.id === meals[leg]?.[i])?.label || "",
+    })).filter((l) => l.seat || l.meal),
   }));
 
   // ---- Add to Calendar (.ics) ----
@@ -281,11 +289,19 @@ function Confirmation() {
                 {travellerRows.map((p, i) => (
                   <div key={i} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-slate-100">
                     <span className="font-semibold text-slate-800">{p.name} <span className="text-xs font-normal text-slate-400">({p.type})</span></span>
-                    <span className="flex items-center gap-3 text-xs text-slate-500">
-                      {p.seat && <span className="flex items-center gap-1"><Armchair size={12} /> {p.seat}</span>}
-                      {p.meal && <span className="flex items-center gap-1"><Utensils size={12} /> {p.meal}</span>}
-                      {!p.seat && !p.meal && <span className="text-slate-300">No seat / meal</span>}
-                    </span>
+                    {p.legs.length === 0 ? (
+                      <span className="text-xs text-slate-300">No seat / meal</span>
+                    ) : (
+                      <span className="flex flex-col items-end gap-0.5 text-xs text-slate-500">
+                        {p.legs.map((l, li) => (
+                          <span key={li} className="flex items-center gap-2">
+                            {l.label && <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{l.label}</span>}
+                            {l.seat && <span className="flex items-center gap-1"><Armchair size={12} /> {l.seat}</span>}
+                            {l.meal && <span className="flex items-center gap-1"><Utensils size={12} /> {l.meal}</span>}
+                          </span>
+                        ))}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>

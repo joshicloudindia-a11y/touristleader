@@ -12,5 +12,5 @@ export function useBilling() {
       .then((d) => { if (d.config) setConfig(d.config); })
       .finally(() => setReady(true));
   }, []);
-  return { config, ready, quote: (subtotal: number, state?: string | null) => quoteBooking(subtotal, state, config) };
+  return { config, ready, quote: (subtotal: number, state?: string | null, pax = 1) => quoteBooking(subtotal, state, config, pax) };
 }

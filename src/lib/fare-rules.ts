@@ -1,4 +1,4 @@
-import { AIRPORTS } from "./constants";
+import { AIRPORTS, MEALS } from "./constants";
 import type { TravellerCount } from "./types";
 
 /** Both endpoints within India → domestic (no passport/ID mandate for the passenger form). */
@@ -72,14 +72,15 @@ export function ageOnDate(dobISO: string, onISO: string): number {
 
 /** Human age band for each passenger type (shown next to the form heading). */
 export const TYPE_AGE_LABEL: Record<PaxType, string> = {
-  Adult: "18+ yrs",
-  Child: "2–18 yrs",
+  Adult: "12+ yrs",
+  Child: "2–12 yrs",
   Infant: "under 2 yrs",
 };
 
 /**
  * Validate a date of birth against its passenger type's age band, measured on the
- * travel date: Infant 0–2, Child 2–18, Adult 18+. Returns "" when valid.
+ * travel date (standard airline bands): Infant 0–2, Child 2–12, Adult 12+.
+ * Returns "" when valid.
  */
 export function dobErrorForType(dobISO: string, type: PaxType, travelISO: string): string {
   if (!dobISO) return "Date of birth is required";
@@ -87,8 +88,8 @@ export function dobErrorForType(dobISO: string, type: PaxType, travelISO: string
   const age = ageOnDate(dobISO, travelISO);
   if (age < 0) return "Enter a valid date of birth";
   if (type === "Infant" && age >= 2) return "Infant must be under 2 years on the travel date";
-  if (type === "Child" && (age < 2 || age >= 18)) return "Child must be 2–18 years on the travel date";
-  if (type === "Adult" && age < 18) return "Adult must be 18 years or older on the travel date";
+  if (type === "Child" && (age < 2 || age >= 12)) return "Child must be 2–12 years on the travel date";
+  if (type === "Adult" && age < 12) return "Adult must be 12 years or older on the travel date";
   return "";
 }
 
@@ -112,4 +113,40 @@ export function mealCharge(fareId: string | undefined, mealId: string, basePrice
   if (fareId === "YOUR_CHOICE") return 0;
   if (fareId === "COMFORT") return mealId === "veg" || mealId === "nonveg" ? 0 : basePrice;
   return basePrice;
+}
+
+// ---- Per-leg seat & meal (SSR) helpers — shared by the seats/meals steps ----
+
+/** SSR selection map: legIndex → passengerIndex → seatId/mealId. Leg 0 = primary flight. */
+export type SsrMap = Record<number, Record<number, string>>;
+
+/** Base (pre-fare-inclusion) price of a seat by its grid id, e.g. "12A". */
+export function seatBasePrice(id: string): number {
+  const row = parseInt(id);
+  const col = id.replace(/\d/g, "");
+  if (row <= 3) return 600; // front premium
+  if (col === "A" || col === "F") return 350; // window
+  if (row >= 11 && row <= 13) return 450; // emergency rows
+  return 200;
+}
+
+/**
+ * Total seat + meal add-on charge across every leg. Each leg is priced with its own
+ * fare inclusions (fareIds[legIndex]), so a Comfort onward + Regular return charge
+ * independently. Empty legs contribute nothing.
+ */
+export function addOnsTotal(seats: SsrMap, meals: SsrMap, fareIds: (string | undefined)[]): number {
+  let total = 0;
+  for (const [legStr, perPax] of Object.entries(seats || {})) {
+    const fid = fareIds[Number(legStr)];
+    for (const id of Object.values(perPax || {})) if (id) total += seatCharge(fid, seatBasePrice(id));
+  }
+  for (const [legStr, perPax] of Object.entries(meals || {})) {
+    const fid = fareIds[Number(legStr)];
+    for (const mealId of Object.values(perPax || {})) {
+      const m = MEALS.find((x) => x.id === mealId);
+      if (m) total += mealCharge(fid, m.id, m.price);
+    }
+  }
+  return total;
 }

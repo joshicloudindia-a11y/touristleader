@@ -6,7 +6,7 @@ import type { CabinClass, TravellerCount } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useT } from "@/store/preferences";
 
-function Counter({ label, sub, value, onChange, min = 0 }: { label: string; sub: string; value: number; onChange: (n: number) => void; min?: number }) {
+function Counter({ label, sub, value, onChange, min = 0, disableInc = false }: { label: string; sub: string; value: number; onChange: (n: number) => void; min?: number; disableInc?: boolean }) {
   return (
     <div className="flex items-center justify-between py-2.5">
       <div>
@@ -19,14 +19,17 @@ function Counter({ label, sub, value, onChange, min = 0 }: { label: string; sub:
           <Minus size={14} />
         </button>
         <span className="w-5 text-center text-sm font-bold">{value}</span>
-        <button type="button" onClick={() => onChange(value + 1)}
-          className="grid h-8 w-8 place-items-center rounded-full border border-slate-300 text-slate-600 hover:border-brand hover:text-brand">
+        <button type="button" onClick={() => onChange(value + 1)} disabled={disableInc}
+          className="grid h-8 w-8 place-items-center rounded-full border border-slate-300 text-slate-600 disabled:opacity-40 disabled:hover:border-slate-300 disabled:hover:text-slate-600 hover:border-brand hover:text-brand">
           <Plus size={14} />
         </button>
       </div>
     </div>
   );
 }
+
+/** Max travellers on a single (non-group) booking. 10+ must use Group Booking. */
+export const MAX_TRAVELLERS = 9;
 
 export function TravellerSelect({
   travellers,
@@ -43,6 +46,8 @@ export function TravellerSelect({
   const ref = useRef<HTMLDivElement>(null);
   const t = useT();
   const total = travellers.adults + travellers.children + travellers.infants;
+  // A single booking is capped at 9 travellers; larger parties go through Group Booking.
+  const atMax = total >= MAX_TRAVELLERS;
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -63,9 +68,15 @@ export function TravellerSelect({
 
       {open && (
         <div className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[90vw] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
-          <Counter label={t("tr_adults")} sub={t("tr_adultsSub")} value={travellers.adults} min={1} onChange={(n) => onChange({ ...travellers, adults: n }, cabinClass)} />
-          <Counter label={t("tr_children")} sub={t("tr_childrenSub")} value={travellers.children} onChange={(n) => onChange({ ...travellers, children: n }, cabinClass)} />
-          <Counter label={t("tr_infants")} sub={t("tr_infantsSub")} value={travellers.infants} onChange={(n) => onChange({ ...travellers, infants: n }, cabinClass)} />
+          <Counter label={t("tr_adults")} sub={t("tr_adultsSub")} value={travellers.adults} min={1} disableInc={atMax} onChange={(n) => onChange({ ...travellers, adults: n }, cabinClass)} />
+          <Counter label={t("tr_children")} sub={t("tr_childrenSub")} value={travellers.children} disableInc={atMax} onChange={(n) => onChange({ ...travellers, children: n }, cabinClass)} />
+          {/* One lap-infant per adult — infants can't exceed the adult count. */}
+          <Counter label={t("tr_infants")} sub={t("tr_infantsSub")} value={travellers.infants} disableInc={atMax || travellers.infants >= travellers.adults} onChange={(n) => onChange({ ...travellers, infants: n }, cabinClass)} />
+          {atMax && (
+            <p className="mt-1 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-700">
+              Max {MAX_TRAVELLERS} travellers per booking. For 10 or more, use <b>Group Booking</b> to send a query.
+            </p>
+          )}
           <div className="mt-3 border-t border-slate-100 pt-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t("tr_cabinClass")}</p>
             <div className="grid grid-cols-3 gap-2">

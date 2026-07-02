@@ -37,7 +37,7 @@ export const DICT: Record<string, Record<string, string>> = {
     fare_special: "Special Fares", filter_popular: "Popular Filter", filter_nonStop: "Non-Stop",
     grp_title: "Unlock Exclusive Perks with Group Bookings!",
     grp_perk1: "Attractive Bulk Discounts", grp_perk2: "Flexible payment options (Pay part amount to reserve)", grp_perk3: "Flexibility in passenger names",
-    btn_search: "SEARCH", btn_addCity: "ADD ANOTHER CITY", btn_done: "Done",
+    btn_search: "SEARCH", btn_groupQuery: "SEND GROUP QUERY", btn_addCity: "ADD ANOTHER CITY", btn_done: "Done",
     // currency menu
     cur_currency: "Currency", cur_language: "Language", cur_payNote: "Prices are indicative. Payments are processed in INR.",
     // home hero + sections

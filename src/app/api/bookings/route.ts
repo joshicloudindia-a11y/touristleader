@@ -127,15 +127,32 @@ export async function POST(req: NextRequest) {
     const perPaxAll = (fare.price || 0) + extraFlights.reduce((s: number, e: { fare?: { price?: number } }) => s + (e.fare?.price || 0), 0);
     const fb = fareBreakdown(query.travellers, perPaxAll);
     const types = paxTypes(query.travellers);
-    // Carry each traveller's chosen seat & meal on the passenger record so the
-    // ticket / email / My Trips can show them per-passenger (seats/meals are picked
-    // by seatable index = adults + children, matching the passenger form order).
-    const enrichedPassengers = (Array.isArray(passengers) ? passengers : []).map((p: { fullName?: string; [k: string]: unknown }, i: number) => ({
-      ...p,
-      type: types[i] || "Adult",
-      seat: (seats && seats[i]) || null,
-      meal: (meals && meals[i]) || null,
-    }));
+    // Per-leg SSR: seats/meals are legIndex → paxIndex → id (leg 0 = onward,
+    // legs 1..N = return / multi-city). Label each leg for the ticket & invoice.
+    const seatMap = (seats || {}) as Record<number, Record<number, string>>;
+    const mealMap = (meals || {}) as Record<number, Record<number, string>>;
+    const legCount = 1 + extraFlights.length;
+    const multiLeg = extraFlights.length > 0;
+    const legLabel = (leg: number) =>
+      !multiLeg ? "" : query.tripType === "ROUND_TRIP" ? (leg === 0 ? "Onward" : "Return") : `Flight ${leg + 1}`;
+    // Carry each traveller's chosen seat & meal — per leg — on the passenger record so
+    // the ticket / invoice / My Trips can show seats & meals for BOTH flights. `seat`/`meal`
+    // stay as the onward selection for backward-compatible single-value rendering.
+    const enrichedPassengers = (Array.isArray(passengers) ? passengers : []).map((p: { fullName?: string; [k: string]: unknown }, i: number) => {
+      const ssr = Array.from({ length: legCount }, (_, leg) => ({
+        leg,
+        label: legLabel(leg),
+        seat: seatMap[leg]?.[i] || null,
+        meal: mealMap[leg]?.[i] || null,
+      })).filter((x) => x.seat || x.meal);
+      return {
+        ...p,
+        type: types[i] || "Adult",
+        seat: seatMap[0]?.[i] || null,
+        meal: mealMap[0]?.[i] || null,
+        ssr,
+      };
+    });
 
     let saved = true;
     try {
@@ -161,6 +178,7 @@ export async function POST(req: NextRequest) {
           baseFare: Math.round(perPaxAll * 0.82),
           taxes: Math.round(perPaxAll * 0.18),
           addOns: body.addOns || 0,
+          agentMarkup: Math.max(0, Number(body.agentMarkup) || 0),
           ...billingFields(body),
           totalAmount: total || fare.price,
           paymentSource: body.paymentSource || (razorpayPaymentId ? "razorpay" : "test"),

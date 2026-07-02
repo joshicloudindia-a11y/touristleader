@@ -79,7 +79,7 @@ export default function PassengersPage() {
   const domestic = isDomesticRoute(query.from, query.to);
   const travelISO = query.departDate || new Date().toISOString().slice(0, 10);
 
-  // DOB must match the passenger's age band (Infant 0–2, Child 2–18, Adult 18+) on the travel date.
+  // DOB must match the passenger's age band (Infant 0–2, Child 2–12, Adult 12+) on the travel date.
   const dobErr = (dob: string, i: number) => dobErrorForType(dob, types[i] || "Adult", travelISO);
   const clearDobIfValid = (i: number, value: string) =>
     setErrors((e) => (e[`p${i}_dob`] && !dobErr(value, i) ? { ...e, [`p${i}_dob`]: "" } : e));

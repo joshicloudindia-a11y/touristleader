@@ -31,10 +31,16 @@ export interface GstBreakdown { type: "IGST" | "CGST_SGST" | "NONE"; igst: numbe
 
 const r = (n: number) => Math.round(n);
 
-/** Service charge for a given booking amount (rupees). */
-export function computeServiceCharge(bookingAmount: number, cfg: BillingConfigData): number {
+/**
+ * Service charge for a booking (rupees).
+ *  - FLAT    → a fixed fee **per passenger** (₹value × pax). e.g. ₹100 × 2 = ₹200.
+ *  - PERCENT → a percentage of the whole booking amount (total), independent of pax.
+ * `pax` defaults to 1 so callers that don't pass a count get the single-fee behaviour.
+ */
+export function computeServiceCharge(bookingAmount: number, cfg: BillingConfigData, pax = 1): number {
   if (!bookingAmount || bookingAmount <= 0) return 0;
-  return cfg.serviceChargeType === "PERCENT" ? r((bookingAmount * cfg.serviceChargeValue) / 100) : r(cfg.serviceChargeValue);
+  if (cfg.serviceChargeType === "PERCENT") return r((bookingAmount * cfg.serviceChargeValue) / 100);
+  return r(cfg.serviceChargeValue) * Math.max(1, pax);
 }
 
 /** GST on a taxable amount, split by place of supply (same state → CGST+SGST, else IGST).
@@ -52,9 +58,10 @@ export function computeGst(taxable: number, customerState: string | undefined | 
   return { type: "IGST", igst, cgst: 0, sgst: 0, total: igst };
 }
 
-/** Full quote: service charge + GST on it. `addon` is what gets added to the existing total. */
-export function quoteBooking(bookingAmount: number, customerState: string | undefined | null, cfg: BillingConfigData) {
-  const serviceCharge = computeServiceCharge(bookingAmount, cfg);
+/** Full quote: service charge + GST on it. `addon` is what gets added to the existing total.
+ *  `pax` scales a FLAT service charge (per passenger); PERCENT ignores it. */
+export function quoteBooking(bookingAmount: number, customerState: string | undefined | null, cfg: BillingConfigData, pax = 1) {
+  const serviceCharge = computeServiceCharge(bookingAmount, cfg, pax);
   const gst = computeGst(serviceCharge, customerState, cfg);
   return { serviceCharge, gst, addon: serviceCharge + gst.total };
 }

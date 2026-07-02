@@ -43,7 +43,10 @@ export default function HotelPaymentPage() {
   if (!mounted) return null;
 
   const subtotal = useHotelBooking.getState().total();
-  const q = quote(subtotal, billState);
+  // FLAT service charge is per guest.
+  const hq = useHotelBooking.getState().query;
+  const guestCount = hq ? (hq.adults || 1) + (hq.children || 0) : 1;
+  const q = quote(subtotal, billState, guestCount);
   const grandTotal = subtotal + q.addon;
 
   const finalize = async (total: number, rzp: { razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string }) => {

@@ -104,6 +104,7 @@ model Booking {
   customerState String?
   // --- Agent attribution + commission ---
   bookedByAgentId String?
+  agentMarkup     Float  @default(0) // agent's own service charge added at checkout
   commission      Float  @default(0)
   commissionGst   Float  @default(0)
   // --- Payment + refund ---
@@ -369,6 +370,39 @@ model VisaEnquiry {
   @@index([userId])
   @@index([email])
   @@index([enquiryNo])
+}
+
+// Group flight booking is handled as a query/lead (10+ travellers), not an instant booking.
+model GroupEnquiry {
+  id             String   @id @default(cuid())
+  enquiryNo      String   @unique
+  userId         String?
+  tripType       String   @default("ONE_WAY") // ONE_WAY | ROUND_TRIP
+  origin         String
+  destination    String
+  departDate     String
+  returnDate     String?
+  cabinClass     String   @default("Economy")
+  adults         Int      @default(10)
+  children       Int      @default(0)
+  infants        Int      @default(0)
+  passengerNames Json?    // string[] of traveller names supplied with the query
+  name           String   // contact person
+  email          String
+  phone          String
+  company        String?  // organisation / agency (optional)
+  message        String?  @db.Text
+  status         String   @default("NEW") // NEW | CONTACTED | QUOTED | BOOKED | CLOSED
+  source         String   @default("WEB")
+  assignedTo     String?
+  note           String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([enquiryNo])
+  @@index([status])
 }
 
 model PackageEnquiry {

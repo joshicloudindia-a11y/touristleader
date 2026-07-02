@@ -27,7 +27,9 @@ export function PriceSummary({ cta, editableState = true }: { cta?: React.ReactN
   const convenience = 299;
   const discount = promoDiscount(promoCode, fb.fareTotal + addOns); // promo applies to fare + add-ons
   const subtotal = fb.fareTotal + addOns + convenience - discount;
-  const q = quote(subtotal, customerState);
+  // FLAT service charge is per passenger (all travellers on the booking).
+  const paxCount = query.travellers.adults + query.travellers.children + query.travellers.infants;
+  const q = quote(subtotal, customerState, paxCount);
   const total = subtotal + q.addon + agentMarkup;
 
   return (

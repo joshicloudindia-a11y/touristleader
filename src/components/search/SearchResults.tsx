@@ -242,7 +242,7 @@ export function SearchResults() {
     <div className="mx-auto max-w-7xl px-4 py-5">
       {data && !data.live && (
         <div className="mb-3">
-          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">Demo fares — live Benzy API pending IP whitelist</span>
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">Demo fares — live Akbar API pending IP whitelist</span>
         </div>
       )}
 

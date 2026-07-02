@@ -32,7 +32,8 @@ export default function BusPaymentPage() {
   if (!st0.bus) return null;
 
   const subtotal = st0.total();
-  const q = quote(subtotal, billState);
+  // FLAT service charge is per passenger (one per booked seat).
+  const q = quote(subtotal, billState, st0.seats.length || 1);
   const grandTotal = subtotal + q.addon;
 
   const finalize = async (total: number, rzp: { razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string }) => {

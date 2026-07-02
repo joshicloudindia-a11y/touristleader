@@ -29,7 +29,7 @@ function customerBillTo(b: BillableBooking): BillTo {
  *  - direct customer bookings → the customer's name/email/phone/state
  * Agency rows are batch-loaded to avoid an N+1.
  */
-export async function attachBillTo<T extends BillableBooking>(bookings: T[]): Promise<(T & { billTo: BillTo })[]> {
+export async function attachBillTo<T extends BillableBooking>(bookings: T[]): Promise<(T & { billTo: BillTo; agentName: string | null })[]> {
   const agentIds = [...new Set(bookings.map((b) => b.bookedByAgentId).filter((id): id is string => !!id))];
   // Agency details live in AgentApplication; the agent's User row is the fallback
   // when no registration exists (e.g. role granted directly by an admin).
@@ -49,6 +49,7 @@ export async function attachBillTo<T extends BillableBooking>(bookings: T[]): Pr
         const cityState = [app.city, app.state].filter(Boolean).join(", ");
         return {
           ...b,
+          agentName: app.agencyName || app.fullName || null,
           billTo: {
             label: "Billed To (Agent)",
             name: app.agencyName || app.fullName,
@@ -67,6 +68,7 @@ export async function attachBillTo<T extends BillableBooking>(bookings: T[]): Pr
       if (u) {
         return {
           ...b,
+          agentName: u.name || u.email || "Agent",
           billTo: {
             label: "Billed To (Agent)",
             name: u.name || u.email || "Agent",
@@ -79,6 +81,6 @@ export async function attachBillTo<T extends BillableBooking>(bookings: T[]): Pr
         };
       }
     }
-    return { ...b, billTo: customerBillTo(b) };
+    return { ...b, agentName: null, billTo: customerBillTo(b) };
   });
 }

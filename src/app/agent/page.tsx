@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Ticket, LifeBuoy, ReceiptText, ArrowRight, Loader2, Plus, Headset } from "lucide-react";
+import { Ticket, LifeBuoy, ReceiptText, ArrowRight, Loader2, Plus, Headset, FilePlus2, UsersRound } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 
 interface Stats { bookings: number; enquiries: number; openEnquiries: number; tickets: number; openTickets: number }
@@ -18,10 +18,12 @@ export default function AgentHome() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  const cards = [
+  const cards: { href: string; icon: React.ElementType; color: string; title: string; desc: string; value: number | string; suffix: string }[] = [
     { href: "/agent/enquiries", icon: Ticket, color: "from-orange-500 to-amber-600", title: "Leads", desc: "Work customer enquiries", value: stats?.openEnquiries ?? 0, suffix: "new" },
     { href: "/agent/tickets", icon: LifeBuoy, color: "from-rose-500 to-pink-600", title: "Support Tickets", desc: "Reply to customers", value: stats?.openTickets ?? 0, suffix: "open" },
     { href: "/agent/bookings", icon: ReceiptText, color: "from-sky-500 to-blue-600", title: "Bookings", desc: "View & assist", value: stats?.bookings ?? 0, suffix: "total" },
+    { href: "/agent/invoices", icon: FilePlus2, color: "from-violet-500 to-purple-600", title: "Manual Invoices", desc: "Create a customer invoice", value: "＋", suffix: "new" },
+    { href: "/agent/group-enquiries", icon: UsersRound, color: "from-teal-500 to-emerald-600", title: "Group Queries", desc: "Group booking leads", value: "", suffix: "" },
   ];
 
   return (

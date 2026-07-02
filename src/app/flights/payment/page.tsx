@@ -51,7 +51,10 @@ export default function PaymentPage() {
   const discountable = useBooking.getState().totalAmount(); // fare × pax + add-ons
   const discount = promoDiscount(useBooking.getState().promoCode, discountable);
   const subtotal = discountable + 299 - discount;
-  const q = quote(subtotal, customerState);
+  // FLAT service charge is per passenger (all travellers on the booking).
+  const trv = useBooking.getState().query?.travellers;
+  const paxCount = trv ? trv.adults + trv.children + trv.infants : 1;
+  const q = quote(subtotal, customerState, paxCount);
   const grandTotal = subtotal + q.addon + agentMarkup; // agent's own service charge (0 for customers)
 
   type RzpFields = { razorpayOrderId?: string; razorpayPaymentId?: string; razorpaySignature?: string };
