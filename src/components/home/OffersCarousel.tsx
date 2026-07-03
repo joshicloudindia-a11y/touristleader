@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Tag } from "lucide-react";
 import { OFFERS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -15,13 +16,15 @@ export function OffersCarousel() {
     <div>
       <div className="relative overflow-hidden rounded-2xl">
         <div className="flex transition-transform duration-500" style={{ transform: `translateX(-${i * 100}%)` }}>
-          {OFFERS.map((o) => (
-            <div key={o.id} className={cn("flex min-w-full items-center justify-between gap-4 bg-gradient-to-r p-5 text-white sm:p-6", o.bg)}>
-              <div>
-                <p className="text-xl font-extrabold sm:text-2xl">{o.title}</p>
-                <p className="mt-0.5 text-sm text-white/90">{o.subtitle}</p>
+          {OFFERS.map((o, idx) => (
+            <div key={o.id} className="relative flex min-h-[120px] min-w-full items-center justify-between gap-4 overflow-hidden p-5 text-white sm:min-h-[140px] sm:p-6">
+              <Image src={o.image} alt={o.title} fill sizes="(max-width:768px) 100vw, 50vw" priority={idx === 0} className="object-cover opacity-50" />
+              <div className={cn("absolute inset-0 bg-gradient-to-r opacity-60", o.bg)} />
+              <div className="relative">
+                <p className="text-xl font-extrabold drop-shadow-sm sm:text-2xl">{o.title}</p>
+                <p className="mt-0.5 text-sm text-white/90 drop-shadow-sm">{o.subtitle}</p>
               </div>
-              <div className="flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-sm font-bold backdrop-blur">
+              <div className="relative flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-sm font-bold backdrop-blur">
                 <Tag size={14} /> {o.code}
               </div>
             </div>

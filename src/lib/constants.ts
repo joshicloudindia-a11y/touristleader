@@ -236,8 +236,8 @@ export const AIRPORT_SERVICES = [
 ];
 
 export const OFFERS = [
-  { id: 1, title: "Flat ₹1,500 OFF", subtitle: "on domestic flights with HDFC Bank cards", code: "TLHDFC", bg: "from-rose-500 to-pink-600" },
-  { id: 2, title: "Up to ₹3,000 Cashback", subtitle: "Pay via UPI & win assured wallet cashback", code: "TLUPI", bg: "from-indigo-500 to-blue-600" },
-  { id: 3, title: "Student Special", subtitle: "Extra baggage + up to 10% off base fare", code: "TLSTUDENT", bg: "from-emerald-500 to-teal-600" },
-  { id: 4, title: "Festive Fiesta", subtitle: "Seasonal fares to 100+ destinations", code: "TLFEST", bg: "from-amber-500 to-orange-600" },
+  { id: 1, title: "Flat ₹1,500 OFF", subtitle: "on domestic flights with HDFC Bank cards", code: "TLHDFC", bg: "from-rose-500 to-pink-600", image: "/heroes/flights.jpg" },
+  { id: 2, title: "Up to ₹3,000 Cashback", subtitle: "Pay via UPI & win assured wallet cashback", code: "TLUPI", bg: "from-indigo-500 to-blue-600", image: "/heroes/forex.jpg" },
+  { id: 3, title: "Student Special", subtitle: "Extra baggage + up to 10% off base fare", code: "TLSTUDENT", bg: "from-emerald-500 to-teal-600", image: "/destinations/goa.jpg" },
+  { id: 4, title: "Festive Fiesta", subtitle: "Seasonal fares to 100+ destinations", code: "TLFEST", bg: "from-amber-500 to-orange-600", image: "/packages/dubai.jpg" },
 ];
