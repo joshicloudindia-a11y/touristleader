@@ -32,14 +32,14 @@ function flightHref(from: string, to: string, extra = "") {
 }
 
 const ROUTES = [
-  { fromCity: "New Delhi", from: "DEL", toCity: "Mumbai", to: "BOM", price: "₹1,899", hrs: "2h 10m" },
-  { fromCity: "New Delhi", from: "DEL", toCity: "Bengaluru", to: "BLR", price: "₹2,199", hrs: "2h 45m" },
-  { fromCity: "Mumbai", from: "BOM", toCity: "Goa", to: "GOI", price: "₹1,499", hrs: "1h 25m" },
-  { fromCity: "New Delhi", from: "DEL", toCity: "Goa", to: "GOI", price: "₹2,499", hrs: "2h 35m" },
-  { fromCity: "Bengaluru", from: "BLR", toCity: "Hyderabad", to: "HYD", price: "₹1,799", hrs: "1h 15m" },
-  { fromCity: "Chennai", from: "MAA", toCity: "Kolkata", to: "CCU", price: "₹2,899", hrs: "2h 20m" },
-  { fromCity: "Mumbai", from: "BOM", toCity: "New Delhi", to: "DEL", price: "₹1,950", hrs: "2h 05m" },
-  { fromCity: "New Delhi", from: "DEL", toCity: "Dubai", to: "DXB", price: "₹12,499", hrs: "3h 45m" },
+  { fromCity: "New Delhi", from: "DEL", toCity: "Mumbai", to: "BOM", price: "₹1,899", hrs: "2h 10m", img: "/destinations/mumbai.jpg" },
+  { fromCity: "New Delhi", from: "DEL", toCity: "Bengaluru", to: "BLR", price: "₹2,199", hrs: "2h 45m", img: "/destinations/bengaluru.jpg" },
+  { fromCity: "Mumbai", from: "BOM", toCity: "Goa", to: "GOI", price: "₹1,499", hrs: "1h 25m", img: "/destinations/goa.jpg" },
+  { fromCity: "New Delhi", from: "DEL", toCity: "Goa", to: "GOI", price: "₹2,499", hrs: "2h 35m", img: "/destinations/goa2.jpg" },
+  { fromCity: "Bengaluru", from: "BLR", toCity: "Hyderabad", to: "HYD", price: "₹1,799", hrs: "1h 15m", img: "/destinations/hyderabad.jpg" },
+  { fromCity: "Chennai", from: "MAA", toCity: "Kolkata", to: "CCU", price: "₹2,899", hrs: "2h 20m", img: "/destinations/kolkata.jpg" },
+  { fromCity: "Mumbai", from: "BOM", toCity: "New Delhi", to: "DEL", price: "₹1,950", hrs: "2h 05m", img: "/destinations/delhi.jpg" },
+  { fromCity: "New Delhi", from: "DEL", toCity: "Dubai", to: "DXB", price: "₹12,499", hrs: "3h 45m", img: "/destinations/dubai.jpg" },
 ];
 
 const STEPS = [
@@ -128,24 +128,37 @@ export default function HomePage() {
         <section className="mx-auto mt-14 max-w-7xl px-4">
           <h2 className="text-xl font-bold text-slate-900 sm:text-2xl"><T k="sec_popRoutes" /></h2>
           <p className="mt-1 text-sm text-slate-500"><T k="sec_popRoutesSub" /></p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {ROUTES.map((r) => (
               <Link
                 key={`${r.from}-${r.to}`}
                 href={flightHref(r.from, r.to)}
-                className="group rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md"
               >
-                <div className="flex items-center gap-2 text-slate-900">
-                  <span className="font-bold">{r.fromCity}</span>
-                  <ArrowRight size={16} className="text-brand transition-transform group-hover:translate-x-0.5" />
-                  <span className="font-bold">{r.toCity}</span>
+                <div className="relative h-28 overflow-hidden">
+                  <Image
+                    src={r.img}
+                    alt={`${r.fromCity} to ${r.toCity}`}
+                    fill
+                    sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 25vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/85 via-slate-900/25 to-transparent" />
+                  <div className="absolute inset-x-3 bottom-2.5 flex items-center gap-2 text-sm text-white">
+                    <span className="truncate font-bold drop-shadow-sm">{r.fromCity}</span>
+                    <ArrowRight size={15} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
+                    <span className="truncate font-bold drop-shadow-sm">{r.toCity}</span>
+                  </div>
                 </div>
-                <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
-                  <span className="flex items-center gap-1"><Plane size={13} /> {r.from}–{r.to}</span>
-                  <span className="flex items-center gap-1"><Clock size={13} /> {r.hrs}</span>
-                </div>
-                <div className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-500">
-                  from <span className="text-base font-extrabold text-brand">{r.price}</span>
+                <div className="flex flex-1 flex-col p-4">
+                  <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <span className="flex items-center gap-1"><Plane size={13} /> {r.from}–{r.to}</span>
+                    <span className="flex items-center gap-1"><Clock size={13} /> {r.hrs}</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                    <span className="text-sm text-slate-500">from <span className="text-base font-extrabold text-brand">{r.price}</span></span>
+                    <span className="flex items-center gap-1 text-xs font-semibold text-brand opacity-0 transition-opacity group-hover:opacity-100">View <ArrowRight size={12} /></span>
+                  </div>
                 </div>
               </Link>
             ))}
