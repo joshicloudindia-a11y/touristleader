@@ -39,6 +39,9 @@ yarn-error.log*
 # benzy certification output (contains real PNRs / tokens — never commit)
 /benzy-cert-output/
 
+# amadeus certification output (contains real PNRs / e-tickets / SOAP tokens — never commit)
+/amadeus-cert-output/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
