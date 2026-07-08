@@ -6,6 +6,7 @@ import { StickyNav } from "@/components/home/StickyNav";
 import { Footer } from "@/components/Footer";
 import { SearchWidget } from "@/components/home/SearchWidget";
 import { OffersCarousel } from "@/components/home/OffersCarousel";
+import { PnrStatus } from "@/components/home/PnrStatus";
 import { WishlistButton } from "@/components/WishlistButton";
 import { T } from "@/components/T";
 import { AIRLINES } from "@/lib/constants";
@@ -80,6 +81,11 @@ export default function HomePage() {
         {/* Offers */}
         <section className="mx-auto mt-14 max-w-7xl px-4">
           <OffersCarousel />
+        </section>
+
+        {/* Check PNR / booking status */}
+        <section className="mx-auto mt-12 max-w-7xl px-4">
+          <PnrStatus />
         </section>
 
         {/* Features */}
