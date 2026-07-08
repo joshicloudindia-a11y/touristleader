@@ -17,6 +17,7 @@ import { generateHotels } from "./mock-hotels";
 import { DEMO_OFFERS, type Offer } from "./offers";
 import type { SearchQuery, Flight } from "./types";
 import type { Hotel, HotelSearchQuery } from "./hotel-types";
+import { getSignature } from "./benzy-booking";
 
 const cfg = {
   signatureUrl: process.env.BENZY_SIGNATURE_URL || "https://b2bapiutils.benzyinfotech.com/Utils/Signature",
@@ -89,27 +90,46 @@ function cabinCode(c: string) {
   return c === "Business" ? "B" : c === "Premium" ? "PE" : "E";
 }
 
-/** Build the ExpressSearch request body per Benzy B2B docs. */
-function buildSearchBody(q: SearchQuery, token: string) {
-  const trips = [{ From: q.from, To: q.to, OnwardDate: q.departDate, TUI: "" }];
-  if (q.tripType === "ROUND_TRIP" && q.returnDate) {
-    trips.push({ From: q.to, To: q.from, OnwardDate: q.returnDate, TUI: "" });
-  }
+/**
+ * Build the ExpressSearch request body, matching Benzy's certification reference
+ * (test-cases folder, 1.ExpressSearch.json) exactly. Round-trip is a SINGLE trip entry
+ * with ReturnDate set (not two trips); ClientID is the encrypted id from Signature.
+ */
+function buildSearchBody(q: SearchQuery, clientId: string) {
+  const trip = {
+    From: q.from,
+    To: q.to,
+    OnwardDate: q.departDate,
+    ReturnDate: q.tripType === "ROUND_TRIP" && q.returnDate ? q.returnDate : "",
+    TUI: "",
+  };
   return {
+    FareType: q.tripType === "ROUND_TRIP" ? "RT" : "ON",
     ADT: q.travellers.adults,
     CHD: q.travellers.children,
     INF: q.travellers.infants,
     Cabin: cabinCode(q.cabinClass),
-    Source: "CF",
+    Source: "LV",
     Mode: "AS",
-    ClientID: cfg.clientId,
-    ChannelID: cfg.channelId,
-    FareType: q.tripType === "ROUND_TRIP" ? "RT" : "ON",
+    ClientID: clientId,
     IsMultipleCarrier: false,
     IsRefundable: false,
-    PreferredAirlines: null,
-    TUI: token,
-    Trips: trips,
+    preferedAirlines: [""],
+    TUI: "",
+    SecType: "",
+    Trips: [trip],
+    Parameters: {
+      Airlines: "",
+      GroupType: "",
+      Refundable: "",
+      IsDirect: false,
+      IsStudentFare: false,
+      IsNearbyAirport: false,
+      IsExtendedSearch: false,
+      IsGDSSearch: false,
+      IsLCCSearch: true,
+      IsSeniorCitizen: false,
+    },
   };
 }
 
@@ -162,19 +182,20 @@ export async function searchFlights(q: SearchQuery): Promise<{ flights: Flight[]
     return { flights: generateFlights(q), live: false };
   }
 
-  const token = await getSignatureToken();
-  if (!token) return { flights: generateFlights(q), live: false };
+  const auth = await getSignature();
+  if (!auth) return { flights: generateFlights(q), live: false };
 
   try {
-    const body = buildSearchBody(q, token);
-    let data = await postJson<SearchResponse>(`${cfg.flightsUrl}/flights/ExpressSearch`, body, token);
-    const tui = data.TUI || token;
+    const body = buildSearchBody(q, auth.clientId);
+    let data = await postJson<SearchResponse>(`${cfg.flightsUrl}/flights/ExpressSearch`, body, auth.token);
+    const tui = data.TUI || "";
 
     // Benzy search is async: poll GetExpSearch until Completed === "True".
+    // ClientID is empty on the poll, per the reference GetExpSearch payload.
     let tries = 0;
     while (!isCompleted(data.Completed) && tries < 5) {
       await sleep(900);
-      data = await postJson<SearchResponse>(`${cfg.flightsUrl}/flights/GetExpSearch`, { TUI: tui, ClientID: cfg.clientId }, token);
+      data = await postJson<SearchResponse>(`${cfg.flightsUrl}/flights/GetExpSearch`, { TUI: tui, ClientID: "" }, auth.token);
       tries++;
     }
 

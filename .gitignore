@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# benzy certification output (contains real PNRs / tokens — never commit)
+/benzy-cert-output/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
