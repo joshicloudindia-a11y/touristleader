@@ -64,6 +64,15 @@ const CHD = (ref: number, title: string, first: string, last: string, dob: strin
   lastName: last,
   dateOfBirth: dob,
 });
+const INF = (ref: number, title: string, first: string, last: string, dob: string, attachedToRef: number): BookingPassenger => ({
+  ref,
+  type: "INF",
+  title,
+  firstName: first,
+  lastName: last,
+  dateOfBirth: dob,
+  attachedToRef,
+});
 
 export interface AmadeusCertCase {
   id: string;
@@ -74,81 +83,108 @@ export interface AmadeusCertCase {
   cancel?: boolean;
 }
 
-/** Build all four cert cases relative to a base date (defaults 30 days out). */
+/**
+ * Build all four cert cases relative to a base date, matching the Amadeus IBE
+ * certification scenario sheet exactly:
+ *
+ *   TC1  1 ADT + 1 CHD + 1 INF   One Way      book + ticket issuance
+ *   TC2  2 ADT + 1 CHD + 1 INF   Round Trip   ≥1 connecting flight, then CANCEL
+ *   TC3  1 ADT + 1 CHD + 1 INF   Round Trip   ≥1 connecting flight, seat/bag/meal + EMD
+ *   TC4  1 ADT + 1 CHD           Round Trip   Fare Family / Upsell fares
+ */
 export function buildCertCases(baseDate: string): AmadeusCertCase[] {
   const dep = plusDays(baseDate, 30);
   const ret = plusDays(baseDate, 37);
+  const chdDob = plusDays(baseDate, -2555); // ~7 years
+  const infDob = plusDays(baseDate, -540); // ~18 months
 
-  const seg = (from: string, to: string, date: string, flightNumber: string, bookingClass: string, carrier = "AI"): SellSegment => ({
-    from,
-    to,
-    departDate: date,
-    carrier,
-    flightNumber,
-    bookingClass,
-  });
+  const seg = (
+    from: string,
+    to: string,
+    date: string,
+    flightNumber: string,
+    bookingClass: string,
+    group = 1,
+    carrier = "AI",
+  ): SellSegment => ({ from, to, departDate: date, carrier, flightNumber, bookingClass, group });
 
-  // TC1 — one-way, single adult, book + issue + cancel.
+  // A connecting onward leg DEL→BLR via HYD (OD group 1) + a direct return BLR→DEL (OD group 2).
+  const connectingRoundTrip = (): SellSegment[] => [
+    seg("DEL", "HYD", dep, "559", "M", 1),
+    seg("HYD", "BLR", dep, "542", "M", 1),
+    seg("BLR", "DEL", ret, "804", "M", 2),
+  ];
+
+  // TC1 — one way, 1 ADT + 1 CHD + 1 INF, book + ticket issuance.
   const tc1: AmadeusCertCase = {
     id: "TC1",
-    title: "One-way · 1 ADT · book → ticket → cancel",
+    title: "One Way · 1 ADT + 1 CHD + 1 INF · booking + ticket issuance",
     input: {
-      passengers: [ADT(1, "MR", "ARJUN", "SHARMA")],
+      passengers: [
+        ADT(1, "MR", "ARJUN", "SHARMA"),
+        CHD(2, "MSTR", "AARAV", "SHARMA", chdDob),
+        INF(3, "MISS", "AADHYA", "SHARMA", infDob, 1),
+      ],
       contact: CONTACT,
-      segments: [seg("DEL", "BOM", dep, "805", "M")],
+      segments: [seg("DEL", "BOM", dep, "805", "M", 1)],
       fop: CASH,
+      receivedFrom: "TOURISTLEADER",
+    },
+  };
+
+  // TC2 — round trip w/ ≥1 connecting flight, 2 ADT + 1 CHD + 1 INF, book + ticket then CANCEL.
+  const tc2: AmadeusCertCase = {
+    id: "TC2",
+    title: "Round Trip (connecting) · 2 ADT + 1 CHD + 1 INF · booking + ticketing → cancellation",
+    input: {
+      passengers: [
+        ADT(1, "MR", "ARJUN", "SHARMA"),
+        ADT(2, "MRS", "PRIYA", "SHARMA"),
+        CHD(3, "MSTR", "AARAV", "SHARMA", chdDob),
+        INF(4, "MISS", "AADHYA", "SHARMA", infDob, 1),
+      ],
+      contact: CONTACT,
+      segments: connectingRoundTrip(),
+      fop: CARD,
       receivedFrom: "TOURISTLEADER",
     },
     cancel: true,
   };
 
-  // TC2 — round-trip, 2 ADT + 1 CHD, with seat/meal/bag ancillaries.
-  const tc2Segments = [seg("DEL", "BOM", dep, "805", "M"), seg("BOM", "DEL", ret, "888", "M")];
-  const tc2: AmadeusCertCase = {
-    id: "TC2",
-    title: "Round-trip · 2 ADT + 1 CHD · seat + meal + baggage",
+  // TC3 — round trip w/ ≥1 connecting flight, 1 ADT + 1 CHD + 1 INF, seat/bag/meal + EMD.
+  const tc3: AmadeusCertCase = {
+    id: "TC3",
+    title: "Round Trip (connecting) · 1 ADT + 1 CHD + 1 INF · ancillaries (seat/bag/meal) + EMD",
     input: {
       passengers: [
-        ADT(1, "MR", "ARJUN", "SHARMA"),
-        ADT(2, "MRS", "PRIYA", "SHARMA"),
-        CHD(3, "MSTR", "AARAV", "SHARMA", plusDays(baseDate, -2555)), // ~7y
+        ADT(1, "MR", "ROHAN", "GUPTA"),
+        CHD(2, "MISS", "SAANVI", "GUPTA", chdDob),
+        INF(3, "MSTR", "VIVAAN", "GUPTA", infDob, 1),
       ],
       contact: CONTACT,
-      segments: tc2Segments,
+      segments: connectingRoundTrip(),
       fop: CARD,
       receivedFrom: "TOURISTLEADER",
     },
     ancillaries: [
-      { paxRef: 1, segmentRef: 1, ssrType: "RQST", seat: "12A", carrier: "AI" },
-      { paxRef: 2, segmentRef: 1, ssrType: "RQST", seat: "12B", carrier: "AI" },
+      { paxRef: 1, segmentRef: 1, ssrType: "RQST", seat: "12A", carrier: "AI" }, // seat, onward seg 1 (DEL-HYD)
+      { paxRef: 1, segmentRef: 2, ssrType: "RQST", seat: "14C", carrier: "AI" }, // seat, onward seg 2 (HYD-BLR)
       { paxRef: 1, segmentRef: 1, ssrType: "VGML", carrier: "AI" }, // vegetarian meal
-      { paxRef: 1, segmentRef: 1, ssrType: "BAGS", quantity: 1, carrier: "AI", freetext: "1PC" }, // extra bag
+      { paxRef: 2, segmentRef: 1, ssrType: "CHML", carrier: "AI" }, // child meal
+      { paxRef: 1, segmentRef: 1, ssrType: "BAGS", quantity: 1, carrier: "AI", freetext: "1PC" }, // extra baggage
     ],
-  };
-
-  // TC3 — one-way single adult, paid seat with EMD issuance.
-  const tc3: AmadeusCertCase = {
-    id: "TC3",
-    title: "One-way · 1 ADT · paid seat + EMD",
-    input: {
-      passengers: [ADT(1, "MS", "MEERA", "IYER")],
-      contact: CONTACT,
-      segments: [seg("BLR", "DEL", dep, "504", "M")],
-      fop: CARD,
-      receivedFrom: "TOURISTLEADER",
-    },
-    ancillaries: [{ paxRef: 1, segmentRef: 1, ssrType: "RQST", seat: "1C", carrier: "AI" }],
     emd: true,
   };
 
-  // TC4 — one-way single adult, fare-family / booking-class upsell.
+  // TC4 — round trip, 1 ADT + 1 CHD, Fare Family / Upsell fares (flex booking class).
   const tc4: AmadeusCertCase = {
     id: "TC4",
-    title: "One-way · 1 ADT · fare-family upsell",
+    title: "Round Trip · 1 ADT + 1 CHD · Fare Family / Upsell fares",
     input: {
-      passengers: [ADT(1, "MR", "ROHAN", "GUPTA")],
+      passengers: [ADT(1, "MR", "KARAN", "MEHTA"), CHD(2, "MSTR", "REYANSH", "MEHTA", chdDob)],
       contact: CONTACT,
-      segments: [seg("DEL", "BLR", dep, "503", "U")], // higher fare family / RBD
+      // Upsell / flexible fare-family booking class (e.g. "S") vs the lowest "M".
+      segments: [seg("DEL", "BOM", dep, "805", "S", 1), seg("BOM", "DEL", ret, "888", "S", 2)],
       fop: CASH,
       receivedFrom: "TOURISTLEADER",
     },
@@ -159,7 +195,7 @@ export function buildCertCases(baseDate: string): AmadeusCertCase[] {
 
 /** Convenience: planned request envelopes for one case (for cert docs / shape checks). */
 export function planCase(c: AmadeusCertCase): PlannedMessage[] {
-  return planBookingMessages(c.input);
+  return planBookingMessages(c.input, { ancillaries: c.ancillaries, emd: c.emd, cancel: c.cancel });
 }
 
 export interface CertRunResult {

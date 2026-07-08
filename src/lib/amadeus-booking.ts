@@ -344,6 +344,14 @@ export interface SellSegment {
   carrier: string; // marketing carrier, e.g. "6E"
   flightNumber: string; // digits only, e.g. "2034"
   bookingClass: string; // RBD from the shopped recommendation, e.g. "M"
+  /**
+   * Origin-destination group (1-based). Segments sharing a group form one leg of
+   * the journey; >1 segment in a group = a connecting flight. Onward = 1,
+   * return = 2, etc. Defaults to 1 (single leg) when omitted.
+   */
+  group?: number;
+  /** Slice&Dice / flight indicator (e.g. "1" direct sell). Optional. */
+  flightIndicator?: string;
   /** Optional: departure/arrival time hhmm — improves the sell match when present. */
   departTime?: string;
   arriveTime?: string;
@@ -373,30 +381,50 @@ export interface BookingInput {
 // 1 · Air_SellFromRecommendation
 // ---------------------------------------------------------------------------
 
+/** Group segments into origin-destination legs (round trips + connections), order-preserving. */
+function groupByOD(segments: SellSegment[]): SellSegment[][] {
+  const map = new Map<number, SellSegment[]>();
+  segments.forEach((s) => {
+    const g = s.group ?? 1;
+    if (!map.has(g)) map.set(g, []);
+    map.get(g)!.push(s);
+  });
+  return [...map.values()];
+}
+
 function buildSellBody(segments: SellSegment[]): string {
-  const items = segments
-    .map((s, i) => {
-      const seg = i + 1;
+  let item = 0; // running segment reference across the whole itinerary
+  const ods = groupByOD(segments)
+    .map((segs) => {
+      const segInfos = segs
+        .map((s) => {
+          item++;
+          const indicator = s.flightIndicator
+            ? `<flightTypeDetails><flightIndicator>${xmlEscape(s.flightIndicator)}</flightIndicator></flightTypeDetails>`
+            : "";
+          return `
+        <segmentInformation>
+          <travelProductInformation>
+            <flightDate><departureDate>${iataDate(s.departDate)}</departureDate></flightDate>
+            <boardPointDetails><trueLocationId>${xmlEscape(s.from)}</trueLocationId></boardPointDetails>
+            <offpointDetails><trueLocationId>${xmlEscape(s.to)}</trueLocationId></offpointDetails>
+            <companyDetails><marketingCompany>${xmlEscape(s.carrier)}</marketingCompany></companyDetails>
+            <flightIdentification><flightNumber>${xmlEscape(s.flightNumber)}</flightNumber><bookingClass>${xmlEscape(s.bookingClass)}</bookingClass></flightIdentification>
+            ${indicator}<itemNumber>${item}</itemNumber>
+          </travelProductInformation>
+          <relatedproductInformation><quantity>${sellSeatCount}</quantity><statusCode>NN</statusCode></relatedproductInformation>
+        </segmentInformation>`;
+        })
+        .join("");
       return `
-      <segmentInformation>
-        <travelProductInformation>
-          <flightDate><departureDate>${iataDate(s.departDate)}</departureDate></flightDate>
-          <boardPointDetails><trueLocationId>${xmlEscape(s.from)}</trueLocationId></boardPointDetails>
-          <offpointDetails><trueLocationId>${xmlEscape(s.to)}</trueLocationId></offpointDetails>
-          <companyDetails><marketingCompany>${xmlEscape(s.carrier)}</marketingCompany></companyDetails>
-          <flightIdentification><flightNumber>${xmlEscape(s.flightNumber)}</flightNumber><bookingClass>${xmlEscape(s.bookingClass)}</bookingClass></flightIdentification>
-        </travelProductInformation>
-        <relatedproductInformation><quantity>${sellSeatCount}</quantity><statusCode>NN</statusCode></relatedproductInformation>
-        <itemNumber>${seg}</itemNumber>
-      </segmentInformation>`;
+    <itineraryDetails>
+      <originDestinationDetails><origin>${xmlEscape(segs[0].from)}</origin><destination>${xmlEscape(segs[segs.length - 1].to)}</destination></originDestinationDetails>
+      <message><messageFunctionDetails><messageFunction>183</messageFunction></messageFunctionDetails></message>${segInfos}
+    </itineraryDetails>`;
     })
     .join("");
   return `<Air_SellFromRecommendation xmlns="${cfg.ns.sell}">
-    <messageActionDetails><messageFunctionDetails><messageFunction>183</messageFunction></messageFunctionDetails></messageActionDetails>
-    <itineraryDetails>
-      <originDestinationDetails><origin>${xmlEscape(segments[0].from)}</origin><destination>${xmlEscape(segments[segments.length - 1].to)}</destination></originDestinationDetails>
-      <message><messageFunctionDetails><messageFunction>183</messageFunction></messageFunctionDetails></message>${items}
-    </itineraryDetails>
+    <messageActionDetails><messageFunctionDetails><messageFunction>183</messageFunction></messageFunctionDetails></messageActionDetails>${ods}
   </Air_SellFromRecommendation>`;
 }
 
@@ -477,12 +505,37 @@ export function applyClasses(segments: SellSegment[], classes: string[]): SellSe
 // 2 · PNR_AddMultiElements  (names + contact + ticketing + received-from + SSR)
 // ---------------------------------------------------------------------------
 
-function nameElement(p: BookingPassenger): string {
-  const dob = p.dateOfBirth
-    ? `<dateOfBirth><dateAndTimeDetails><date>${iataDateAlpha(p.dateOfBirth)}</date></dateAndTimeDetails></dateOfBirth>`
-    : "";
-  const infTag = p.type === "INF" ? " INF" : "";
-  return `
+function dobBlock(iso?: string): string {
+  return iso ? `<dateOfBirth><dateAndTimeDetails><date>${iataDateAlpha(iso)}</date></dateAndTimeDetails></dateOfBirth>` : "";
+}
+
+/**
+ * Build the NM traveller elements. An infant is nested under the adult it is
+ * attached to (traveller quantity 2 + a second passengerData carrying
+ * <infantIndicator> and the infant DOB), matching the Amadeus cryptic
+ * NM1SURNAME/ADULT(INF/BABY/ddMMMyy) form. Infants get no separate PR reference.
+ */
+function buildNameElements(passengers: BookingPassenger[]): string {
+  const infants = passengers.filter((p) => p.type === "INF");
+  const seated = passengers.filter((p) => p.type !== "INF");
+  const takenInfants = new Set<number>();
+  return seated
+    .map((p) => {
+      const inf =
+        infants.find((i) => i.attachedToRef === p.ref && !takenInfants.has(i.ref)) ??
+        (p.type === "ADT" ? infants.find((i) => i.attachedToRef == null && !takenInfants.has(i.ref)) : undefined);
+      if (inf) takenInfants.add(inf.ref);
+      const qty = inf ? 2 : 1;
+      const infData = inf
+        ? `
+        <passengerData>
+          <travellerInformation>
+            <passenger><firstName>${xmlEscape(inf.firstName)}</firstName><type>INF</type><infantIndicator>1</infantIndicator></passenger>
+          </travellerInformation>
+          ${dobBlock(inf.dateOfBirth)}
+        </passengerData>`
+        : "";
+      return `
     <travellerInfo>
       <elementManagementPassenger>
         <reference><qualifier>PR</qualifier><number>${p.ref}</number></reference>
@@ -490,12 +543,32 @@ function nameElement(p: BookingPassenger): string {
       </elementManagementPassenger>
       <passengerData>
         <travellerInformation>
-          <traveller><surname>${xmlEscape(p.lastName)}</surname><quantity>1</quantity></traveller>
-          <passenger><firstName>${xmlEscape(p.firstName)}${infTag}</firstName><type>${p.type}</type></passenger>
+          <traveller><surname>${xmlEscape(p.lastName)}</surname><quantity>${qty}</quantity></traveller>
+          <passenger><firstName>${xmlEscape(p.firstName)}</firstName><type>${p.type}</type></passenger>
         </travellerInformation>
-        ${dob}
-      </passengerData>
+        ${dobBlock(p.dateOfBirth)}
+      </passengerData>${infData}
     </travellerInfo>`;
+    })
+    .join("");
+}
+
+/** SSR INFT (one per infant), referencing the accompanying adult's PR number. */
+function infantSsrElements(passengers: BookingPassenger[], carrier: string, startRef: number): string {
+  const infants = passengers.filter((p) => p.type === "INF");
+  const firstAdultRef = passengers.find((p) => p.type === "ADT")?.ref ?? 1;
+  return infants
+    .map((inf, i) => {
+      const adultRef = inf.attachedToRef ?? firstAdultRef;
+      const freetext = `${inf.firstName} ${inf.lastName} ${inf.dateOfBirth ? iataDateAlpha(inf.dateOfBirth) : ""}`.trim();
+      return `
+    <dataElementsIndiv>
+      <elementManagementData><reference><qualifier>OT</qualifier><number>${startRef + i}</number></reference><segmentName>SSR</segmentName></elementManagementData>
+      <serviceRequest><ssr><type>INFT</type><status>HK</status><quantity>1</quantity><companyId>${xmlEscape(carrier)}</companyId><freetext>${xmlEscape(freetext)}</freetext></ssr></serviceRequest>
+      <referenceForDataElement><reference><qualifier>PT</qualifier><number>${adultRef}</number></reference></referenceForDataElement>
+    </dataElementsIndiv>`;
+    })
+    .join("");
 }
 
 function contactElements(c: BookingContact, startRef: number): string {
@@ -551,12 +624,15 @@ function receivedFromElement(ref: number, who: string): string {
  */
 function buildPnrAddBody(input: BookingInput, opts: { commit?: boolean } = {}): string {
   const carrier = input.segments[0]?.carrier || "";
-  const names = input.passengers.map(nameElement).join("");
+  const names = buildNameElements(input.passengers);
+  const infantCount = input.passengers.filter((p) => p.type === "INF").length;
   let ref = 1;
   const contacts = contactElements(input.contact, ref);
   ref += 2;
   const ssrs = contactSsrElements(input.contact, carrier, ref);
   ref += 2;
+  const infts = infantSsrElements(input.passengers, carrier, ref);
+  ref += infantCount;
   const tk = ticketingElement(ref, input.ticketDate);
   ref += 1;
   const rf = receivedFromElement(ref, input.receivedFrom || "TOURISTLEADER");
@@ -567,7 +643,7 @@ function buildPnrAddBody(input: BookingInput, opts: { commit?: boolean } = {}): 
     ${option}
     ${names}
     <dataElementsMaster>
-      <marker1/>${contacts}${ssrs}${tk}${rf}
+      <marker1/>${contacts}${ssrs}${infts}${tk}${rf}
     </dataElementsMaster>
   </PNR_AddMultiElements>`;
 }
@@ -709,15 +785,18 @@ export function ticketNumbers(xml: string): string[] {
 // Ancillaries — Air_RetrieveSeatMap + SSR seat/bag/meal
 // ---------------------------------------------------------------------------
 
-export async function retrieveSeatMap(segments: SellSegment[], session: AmadeusSession | null): Promise<SoapResult> {
+function buildSeatMapBody(segments: SellSegment[]): string {
   const flights = segments
     .map((s) => `
       <flightInfo>
         <flightDetails><departureDate>${iataDate(s.departDate)}</departureDate><boardPoint>${xmlEscape(s.from)}</boardPoint><offPoint>${xmlEscape(s.to)}</offPoint><company>${xmlEscape(s.carrier)}</company><flightNumber>${xmlEscape(s.flightNumber)}</flightNumber><bookingClass>${xmlEscape(s.bookingClass)}</bookingClass></flightDetails>
       </flightInfo>`)
     .join("");
-  const body = `<Air_RetrieveSeatMap xmlns="${cfg.ns.seatMap}"><seatRequestParameters/>${flights}</Air_RetrieveSeatMap>`;
-  return send("Air_RetrieveSeatMap", cfg.actions.seatMap, body, session);
+  return `<Air_RetrieveSeatMap xmlns="${cfg.ns.seatMap}"><seatRequestParameters/>${flights}</Air_RetrieveSeatMap>`;
+}
+
+export async function retrieveSeatMap(segments: SellSegment[], session: AmadeusSession | null): Promise<SoapResult> {
+  return send("Air_RetrieveSeatMap", cfg.actions.seatMap, buildSeatMapBody(segments), session);
 }
 
 export interface AncillarySelection {
@@ -744,53 +823,71 @@ function ancillarySsr(a: AncillarySelection, ref: number): string {
     </dataElementsIndiv>`;
 }
 
-/** Add seat/bag/meal SSRs to the PNR (not committed until pnrCommit). */
-export async function addAncillaries(selections: AncillarySelection[], session: AmadeusSession | null): Promise<SoapResult> {
+function buildAncillaryBody(selections: AncillarySelection[]): string {
   let ref = 1;
   const els = selections.map((a) => ancillarySsr(a, ref++)).join("");
-  const body = `<PNR_AddMultiElements xmlns="${cfg.ns.pnrAdd}"><pnrActions><optionCode>0</optionCode></pnrActions><dataElementsMaster><marker1/>${els}</dataElementsMaster></PNR_AddMultiElements>`;
-  return send("PNR_AddMultiElements(SSR)", cfg.actions.pnrAdd, body, session);
+  return `<PNR_AddMultiElements xmlns="${cfg.ns.pnrAdd}"><pnrActions><optionCode>0</optionCode></pnrActions><dataElementsMaster><marker1/>${els}</dataElementsMaster></PNR_AddMultiElements>`;
+}
+
+/** Add seat/bag/meal SSRs to the PNR (not committed until pnrCommit). */
+export async function addAncillaries(selections: AncillarySelection[], session: AmadeusSession | null): Promise<SoapResult> {
+  return send("PNR_AddMultiElements(SSR)", cfg.actions.pnrAdd, buildAncillaryBody(selections), session);
 }
 
 // ---------------------------------------------------------------------------
 // EMD — Ticket_CreateTSMFareElement then DocIssuance (EMD issue)
 // ---------------------------------------------------------------------------
 
+function buildTsmBody(): string {
+  return `<Ticket_CreateTSMFareElement xmlns="${cfg.ns.createTsm}"><selection><selectionDetails><option>TSM</option></selectionDetails></selection></Ticket_CreateTSMFareElement>`;
+}
+
+function buildEmdBody(): string {
+  return `<DocIssuance_IssueMiscellaneousDocuments xmlns="${cfg.ns.issueEmd}"><optionGroup><switches><statusDetails><indicator>EMD</indicator></statusDetails></switches></optionGroup></DocIssuance_IssueMiscellaneousDocuments>`;
+}
+
 export async function createTsm(session: AmadeusSession | null): Promise<SoapResult> {
-  const body = `<Ticket_CreateTSMFareElement xmlns="${cfg.ns.createTsm}"><selection><selectionDetails><option>TSM</option></selectionDetails></selection></Ticket_CreateTSMFareElement>`;
-  return send("Ticket_CreateTSMFareElement", cfg.actions.createTsm, body, session);
+  return send("Ticket_CreateTSMFareElement", cfg.actions.createTsm, buildTsmBody(), session);
 }
 
 export async function issueEmd(session: AmadeusSession | null): Promise<SoapResult> {
-  const body = `<DocIssuance_IssueMiscellaneousDocuments xmlns="${cfg.ns.issueEmd}"><optionGroup><switches><statusDetails><indicator>EMD</indicator></statusDetails></switches></optionGroup></DocIssuance_IssueMiscellaneousDocuments>`;
-  return send("DocIssuance_IssueMiscellaneousDocuments", cfg.actions.issueEmd, body, session);
+  return send("DocIssuance_IssueMiscellaneousDocuments", cfg.actions.issueEmd, buildEmdBody(), session);
 }
 
 // ---------------------------------------------------------------------------
 // Cancellation — Ticket_CancelDocument (void e-ticket) + PNR_Cancel (XE)
 // ---------------------------------------------------------------------------
 
-export async function cancelTicket(ticketNumber: string, session: AmadeusSession | null): Promise<SoapResult> {
-  const body = `<Ticket_CancelDocument xmlns="${cfg.ns.cancelDoc}">
+function buildCancelDocBody(ticketNumber: string): string {
+  return `<Ticket_CancelDocument xmlns="${cfg.ns.cancelDoc}">
     <ticketNumber><documentDetails><number>${xmlEscape(ticketNumber)}</number></documentDetails></ticketNumber>
     <actionDetails><actionRequest><actionDetail><otherDataFreetext><freeText>CANX</freeText></otherDataFreetext></actionDetail></actionRequest></actionDetails>
   </Ticket_CancelDocument>`;
-  return send("Ticket_CancelDocument", cfg.actions.cancelDoc, body, session);
 }
 
-export async function pnrCancel(session: AmadeusSession | null, close = true): Promise<SoapResult> {
-  // optionCode 10 = end-transact the cancellation; XE = cancel all itinerary elements.
-  const body = `<PNR_Cancel xmlns="${cfg.ns.pnrCancel}">
+function buildPnrCancelBody(): string {
+  // optionCode 10 = end-transact the cancellation; ITY = cancel all itinerary elements.
+  return `<PNR_Cancel xmlns="${cfg.ns.pnrCancel}">
     <pnrActions><optionCode>10</optionCode></pnrActions>
     <cancelElements><entryType>E</entryType><element><identifier>ITY</identifier></element></cancelElements>
   </PNR_Cancel>`;
-  return send("PNR_Cancel", cfg.actions.pnrCancel, body, session, close);
+}
+
+function buildSignOutBody(): string {
+  return `<Security_SignOut xmlns="${cfg.ns.signOut}"><SessionId/></Security_SignOut>`;
+}
+
+export async function cancelTicket(ticketNumber: string, session: AmadeusSession | null): Promise<SoapResult> {
+  return send("Ticket_CancelDocument", cfg.actions.cancelDoc, buildCancelDocBody(ticketNumber), session);
+}
+
+export async function pnrCancel(session: AmadeusSession | null, close = true): Promise<SoapResult> {
+  return send("PNR_Cancel", cfg.actions.pnrCancel, buildPnrCancelBody(), session, close);
 }
 
 /** Explicit session teardown (VLSSOQ) — used if the flow aborts mid-series. */
 export async function signOut(session: AmadeusSession | null): Promise<SoapResult> {
-  const body = `<Security_SignOut xmlns="${cfg.ns.signOut}"><SessionId/></Security_SignOut>`;
-  return send("Security_SignOut", cfg.actions.signOut, body, session, true);
+  return send("Security_SignOut", cfg.actions.signOut, buildSignOutBody(), session, true);
 }
 
 // ---------------------------------------------------------------------------
@@ -957,6 +1054,8 @@ export interface PlannedMessage {
   body: string;
   /** Full SOAP envelope as it would go on the wire (sample session for InSeries). */
   envelope: string;
+  /** Set when the message is only sent under a condition (e.g. the IBP fallback). */
+  conditional?: string;
 }
 
 const SAMPLE_SESSION: AmadeusSession = {
@@ -966,33 +1065,64 @@ const SAMPLE_SESSION: AmadeusSession = {
 };
 
 /**
- * The ordered request messages for the happy-path booking flow — no network I/O.
- * Used to (a) shape-verify each envelope against the WBS guide samples and
- * (b) render the "Payload / Headers / Envelope" per test case for the client.
- * (The live flow is dynamic — IBP fallback + PNR from the reply — so this is the
- * canonical happy path, not a literal replay.)
+ * The ordered request messages for a booking case — no network I/O. Mirrors the
+ * exact sequence runBookingFlow() sends for the same options, so it is used to
+ * (a) shape-verify every envelope against the WBS guide and (b) render the
+ * "Headers / Payload / Envelope / Flow Chart" per test case for the client.
+ * The IBP message is included but flagged `conditional` (sent only on 288/UNS);
+ * the PNR record locator isn't known ahead of the live reply, so Retrieve uses a
+ * placeholder.
  */
-export function planBookingMessages(input: BookingInput): PlannedMessage[] {
+export function planBookingMessages(input: BookingInput, opts: BookingFlowOptions = {}): PlannedMessage[] {
   const seats = input.passengers.filter((p) => p.type !== "INF").length || 1;
   sellSeatCount = seats;
-  const steps: Array<{ name: string; action: string; body: string; status: "Start" | "InSeries" | "End" }> = [
-    { name: "Air_SellFromRecommendation", action: cfg.actions.sell, body: buildSellBody(input.segments), status: "Start" },
-    { name: "PNR_AddMultiElements", action: cfg.actions.pnrAdd, body: buildPnrAddBody(input), status: "InSeries" },
-    { name: "FOP_CreateFormOfPayment", action: cfg.actions.fop, body: buildFopBody(input.fop), status: "InSeries" },
-    { name: "Fare_PricePNRWithBookingClass", action: cfg.actions.pricePnr, body: buildPricePnrBody(), status: "InSeries" },
-    { name: "Ticket_CreateTSTFromPricing", action: cfg.actions.createTst, body: buildCreateTstBody(seats), status: "InSeries" },
-    { name: "PNR_AddMultiElements(commit)", action: cfg.actions.pnrAdd, body: buildPnrAddBody(input, { commit: true }), status: "InSeries" },
-    { name: "PNR_Retrieve", action: cfg.actions.pnrRetrieve, body: buildPnrRetrieveBody("XXXXXX"), status: "InSeries" },
-    { name: "DocIssuance_IssueTicket", action: cfg.actions.issueTicket, body: buildIssueTicketBody(), status: "End" },
-  ];
-  return steps.map((s, i) => ({
-    step: i + 1,
-    name: s.name,
-    action: s.action,
-    sessionStatus: s.status,
-    body: s.body,
-    envelope: buildEnvelope(s.action, s.body, s.status === "Start" ? null : SAMPLE_SESSION, s.status === "End"),
-  }));
+
+  type Step = { name: string; action: string; body: string; conditional?: string };
+  const steps: Step[] = [];
+  steps.push({ name: "Air_SellFromRecommendation", action: cfg.actions.sell, body: buildSellBody(input.segments) });
+  steps.push({
+    name: "Fare_InformativeBestPricingWithoutPNR",
+    action: cfg.actions.ibp,
+    body: buildIbpBody(input.passengers, input.segments),
+    conditional: "Sent only if Air_Sell returns errorCode 288 / UNS — re-prices the same flights on an available class, then Air_Sell is retried with that class.",
+  });
+  steps.push({ name: "PNR_AddMultiElements", action: cfg.actions.pnrAdd, body: buildPnrAddBody(input) });
+  if (opts.ancillaries?.length) {
+    steps.push({ name: "Air_RetrieveSeatMap", action: cfg.actions.seatMap, body: buildSeatMapBody(input.segments) });
+    steps.push({ name: "PNR_AddMultiElements(SSR)", action: cfg.actions.pnrAdd, body: buildAncillaryBody(opts.ancillaries) });
+  }
+  steps.push({ name: "FOP_CreateFormOfPayment", action: cfg.actions.fop, body: buildFopBody(input.fop) });
+  steps.push({ name: "Fare_PricePNRWithBookingClass", action: cfg.actions.pricePnr, body: buildPricePnrBody() });
+  steps.push({ name: "Ticket_CreateTSTFromPricing", action: cfg.actions.createTst, body: buildCreateTstBody(seats) });
+  steps.push({ name: "PNR_AddMultiElements(commit)", action: cfg.actions.pnrAdd, body: buildPnrAddBody(input, { commit: true }) });
+  steps.push({ name: "PNR_Retrieve", action: cfg.actions.pnrRetrieve, body: buildPnrRetrieveBody("XXXXXX") });
+  steps.push({ name: "DocIssuance_IssueTicket", action: cfg.actions.issueTicket, body: buildIssueTicketBody() });
+  if (opts.emd) {
+    steps.push({ name: "Ticket_CreateTSMFareElement", action: cfg.actions.createTsm, body: buildTsmBody() });
+    steps.push({ name: "DocIssuance_IssueMiscellaneousDocuments", action: cfg.actions.issueEmd, body: buildEmdBody() });
+  }
+  if (opts.cancel) {
+    steps.push({ name: "Ticket_CancelDocument", action: cfg.actions.cancelDoc, body: buildCancelDocBody("0002412345678") });
+    steps.push({ name: "PNR_Cancel", action: cfg.actions.pnrCancel, body: buildPnrCancelBody() });
+  }
+  steps.push({ name: "Security_SignOut", action: cfg.actions.signOut, body: buildSignOutBody() });
+
+  // Session status: the first real (non-conditional) message opens with Start; the
+  // last message closes with End; everything between is InSeries.
+  const firstRealIdx = steps.findIndex((s) => !s.conditional);
+  const lastIdx = steps.length - 1;
+  return steps.map((s, i) => {
+    const status: "Start" | "InSeries" | "End" = i === firstRealIdx ? "Start" : i === lastIdx ? "End" : "InSeries";
+    return {
+      step: i + 1,
+      name: s.name,
+      action: s.action,
+      sessionStatus: status,
+      body: s.body,
+      conditional: s.conditional,
+      envelope: buildEnvelope(s.action, s.body, status === "Start" ? null : SAMPLE_SESSION, status === "End"),
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
