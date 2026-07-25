@@ -11,8 +11,8 @@
  * future (no hard-coded past dates).
  */
 import {
+  getSignature,
   runCertBooking,
-  type BenzyAuth,
   type CertBookingInput,
   type CertSearchInput,
   type ContactInfo,
@@ -23,18 +23,36 @@ import {
   type SSRSelection,
   type BookingFlowResult,
 } from "./benzy-booking";
-import { makeCaptureCollector, buildCertBundle, type CertFile } from "./benzy-cert-export";
+import { makeCaptureCollector, buildCertBundle, type BundleOptions, type CertFile } from "./benzy-cert-export";
 
 /* ---- reference passengers & contact (2 ADT / 2 CHD / 2 INF) ---- */
 
-export const CERT_TRAVELLERS: Traveller[] = [
-  { ID: 1, Title: "Mr", FName: "MAX", LName: "AMINI", Age: 25, DOB: "2000-11-06", Gender: "M", PTC: "ADT", Nationality: "IN", PassportNo: "KJ9284M5L2", PLI: "Cochin", PDOE: "2029-12-21", VisaType: "Visiting Visa" },
-  { ID: 2, Title: "Mr", FName: "VAIBHAV", LName: "PUNDIR", Age: 40, DOB: "1985-01-28", Gender: "M", PTC: "ADT", Nationality: "IN", PassportNo: "Z6591729", PLI: "DEHRADUN", PDOE: "2032-08-14", VisaType: "Visiting Visa" },
-  { ID: 3, Title: "Mstr", FName: "K", LName: "CHETHAN", Age: 10, DOB: "2015-08-05", Gender: "M", PTC: "CHD", Nationality: "IN", PassportNo: "PL4471B8X9", PLI: "Cochin", PDOE: "2027-11-17", VisaType: "Visiting Visa" },
-  { ID: 4, Title: "Miss", FName: "C", LName: "LEKHANA", Age: 10, DOB: "2015-09-16", Gender: "F", PTC: "CHD", Nationality: "IN", PassportNo: "PL4471B8X9", PLI: "Cochin", PDOE: "2027-11-29", VisaType: "Visiting Visa" },
-  { ID: 5, Title: "Miss", FName: "ISHIKA", LName: "SEN", Age: 1, DOB: "2024-02-13", Gender: "F", PTC: "INF", Nationality: "IN", PassportNo: "PL4471B8X9", PLI: "Cochin", PDOE: "2027-07-06", VisaType: "Visiting Visa" },
-  { ID: 6, Title: "Mstr", FName: "ISHAN", LName: "SAINI", Age: 1, DOB: "2024-09-10", Gender: "M", PTC: "INF", Nationality: "IN", PassportNo: "KJ9284M5L2", PLI: "Cochin", PDOE: "2027-12-06", VisaType: "Visiting Visa" },
-];
+/** Shift a date by whole years, formatted yyyy-mm-dd. */
+function shiftYears(from: Date, years: number): string {
+  const d = new Date(from.getTime());
+  d.setFullYear(d.getFullYear() + years);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * The reference passenger set, with every date derived from `today`.
+ *
+ * Names / passport numbers / place-of-issue mirror Benzy's reference bundle, but
+ * DOB and passport expiry MUST float with the run date: a fixed infant DOB ages
+ * past 2 years and the airline then rejects it as an infant, and fixed expiry
+ * dates eventually lapse. `Age` stays consistent with the generated DOB.
+ */
+export function certTravellers(today: Date): Traveller[] {
+  return [
+    { ID: 1, Title: "Mr", FName: "MAX", LName: "AMINI", Age: 25, DOB: shiftYears(today, -25), Gender: "M", PTC: "ADT", Nationality: "IN", PassportNo: "KJ9284M5L2", PLI: "Cochin", PDOE: shiftYears(today, 4), VisaType: "Visiting Visa" },
+    { ID: 2, Title: "Mr", FName: "VAIBHAV", LName: "PUNDIR", Age: 40, DOB: shiftYears(today, -40), Gender: "M", PTC: "ADT", Nationality: "IN", PassportNo: "Z6591729", PLI: "DEHRADUN", PDOE: shiftYears(today, 6), VisaType: "Visiting Visa" },
+    { ID: 3, Title: "Mstr", FName: "K", LName: "CHETHAN", Age: 10, DOB: shiftYears(today, -10), Gender: "M", PTC: "CHD", Nationality: "IN", PassportNo: "PL4471B8X9", PLI: "Cochin", PDOE: shiftYears(today, 3), VisaType: "Visiting Visa" },
+    { ID: 4, Title: "Miss", FName: "C", LName: "LEKHANA", Age: 10, DOB: shiftYears(today, -10), Gender: "F", PTC: "CHD", Nationality: "IN", PassportNo: "PL4471B8X9", PLI: "Cochin", PDOE: shiftYears(today, 5), VisaType: "Visiting Visa" },
+    // Infants must still be under 2 on the travel date, so their DOB tracks `today`.
+    { ID: 5, Title: "Miss", FName: "ISHIKA", LName: "SEN", Age: 1, DOB: shiftYears(today, -1), Gender: "F", PTC: "INF", Nationality: "IN", PassportNo: "PL4471B8X9", PLI: "Cochin", PDOE: shiftYears(today, 4), VisaType: "Visiting Visa" },
+    { ID: 6, Title: "Mstr", FName: "ISHAN", LName: "SAINI", Age: 1, DOB: shiftYears(today, -1), Gender: "M", PTC: "INF", Nationality: "IN", PassportNo: "KJ9284M5L2", PLI: "Cochin", PDOE: shiftYears(today, 3), VisaType: "Visiting Visa" },
+  ];
+}
 
 export const CERT_CONTACT: ContactInfo = {
   Title: "",
@@ -155,7 +173,7 @@ export function certBookingInput(c: CertCase, today: Date): CertBookingInput {
   return {
     search: certSearchInput(c, today),
     selectLegs: (trips) => selectLegs(trips, c),
-    travellers: CERT_TRAVELLERS,
+    travellers: certTravellers(today),
     contact: CERT_CONTACT,
     selectSSR: c.baggage ? pickBaggageForPax : undefined,
   };
@@ -172,12 +190,17 @@ export interface CertBundle {
 /**
  * Run one certification case end-to-end with capture on and return the numbered
  * submission files. Run cases SEQUENTIALLY (capture uses a single global sink).
+ *
+ * Signature is called INSIDE the capture window so it lands in the bundle as
+ * file 1 — Benzy's reference bundle numbers it the same way.
  */
-export async function generateCertBundle(auth: BenzyAuth, c: CertCase, today: Date): Promise<CertBundle> {
+export async function generateCertBundle(c: CertCase, today: Date, opts: BundleOptions = {}): Promise<CertBundle> {
   const collector = makeCaptureCollector();
   try {
+    const auth = await getSignature();
+    if (!auth) throw new Error("Benzy Signature failed (check credentials / IP whitelist).");
     const result = await runCertBooking(auth, certBookingInput(c, today));
-    return { case: c, result, files: buildCertBundle(collector.exchanges) };
+    return { case: c, result, files: buildCertBundle(collector.exchanges, opts) };
   } finally {
     collector.stop();
   }

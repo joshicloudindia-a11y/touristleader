@@ -56,7 +56,14 @@ const TIMEOUT_MS = 20000;
 export interface BenzyExchange {
   name: string;
   method: "POST";
+  /** Path only, e.g. "/Flights/SSR". */
   endpoint: string;
+  /** Full request URL, e.g. "https://b2bapiflights.benzyinfotech.com/Flights/SSR". */
+  url: string;
+  /** Request headers exactly as transmitted (Authorization included). */
+  headers: Record<string, string>;
+  /** ISO timestamp of when the response came back. */
+  at: string;
   request: unknown;
   response: unknown;
 }
@@ -70,14 +77,15 @@ export function setBenzyCapture(fn: ((x: BenzyExchange) => void) | null) {
 async function postBenzy<T>(name: string, url: string, body: unknown, token?: string): Promise<T> {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers,
       body: JSON.stringify(body),
       signal: controller.signal,
       cache: "no-store",
@@ -91,7 +99,7 @@ async function postBenzy<T>(name: string, url: string, body: unknown, token?: st
     }
     if (captureSink) {
       const endpoint = url.replace(/^https?:\/\/[^/]+/, "");
-      captureSink({ name, method: "POST", endpoint, request: body, response: json });
+      captureSink({ name, method: "POST", endpoint, url, headers, at: new Date().toISOString(), request: body, response: json });
     }
     if (!res.ok) throw new Error(`Benzy ${name} -> ${res.status}`);
     return json as T;

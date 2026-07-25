@@ -53,11 +53,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Unknown caseId. Valid: ${CERT_CASES.map((c) => c.id).join(", ")}` }, { status: 400 });
   }
 
+  // Pre-flight: fail with a clear 502 before any booking side-effects.
   const auth = await getSignature();
   if (!auth) return NextResponse.json({ error: "Benzy Signature failed (check credentials / IP whitelist)." }, { status: 502 });
 
   try {
-    const bundle = await generateCertBundle(auth, testCase, new Date());
+    const bundle = await generateCertBundle(testCase, new Date());
 
     let writtenTo: string | undefined;
     if (body.write) {
