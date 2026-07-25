@@ -214,7 +214,7 @@ export async function runCertCase(c: AmadeusCertCase): Promise<CertRunResult> {
   const collector = makeAmadeusCollector();
   try {
     const result = await runBookingFlow(c.input, { ancillaries: c.ancillaries, emd: c.emd, cancel: c.cancel });
-    return { result, files: buildAmadeusBundle(collector.exchanges) };
+    return { result, files: buildAmadeusBundle(collector.exchanges, { case: `${c.id} · ${c.title}` }) };
   } finally {
     collector.stop();
   }

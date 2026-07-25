@@ -1,20 +1,21 @@
 /**
- * Amadeus certification — SOAP payload capture & export.
+ * Amadeus certification — SOAP envelope capture & export.
  *
  * Wire `makeAmadeusCollector()` into the booking flow (it registers itself as the
  * active `setAmadeusCapture()` sink) before running `runBookingFlow()`. Every SOAP
- * request/response envelope is collected, then `buildAmadeusBundle()` renders them
- * into numbered files for the certification submission, in the
- * "SOAPAction / Timestamp / Request Envelope / Response Envelope" format:
+ * request/response envelope is collected, then `buildAmadeusBundle()` writes them
+ * as the numbered submission files:
  *
- *   1.Air_SellFromRecommendation.xml
- *   2.PNR_AddMultiElements.xml
- *   3.FOP_CreateFormOfPayment.xml
- *   ... 8.DocIssuance_IssueTicket.xml
+ *   1.Air_SellFromRecommendation.RQ.xml
+ *   1.Air_SellFromRecommendation.RS.xml
+ *   2.PNR_AddMultiElements.RQ.xml
+ *   … 10.Security_SignOut.RS.xml
  *
- * This is the Amadeus analogue of benzy-cert-export.ts. Because the exchanges are
- * the *live* request+response envelopes, the bundle is exactly what the client's
- * Amadeus certification analyst reviews (Headers / Payload / Response per step).
+ * Each file is the raw SOAP envelope exactly as it went on / came off the wire,
+ * preceded by an XML comment carrying the step metadata (operation, SOAPAction,
+ * endpoint, session status). The client asked for the logs as XML rather than a
+ * PDF, so the files must parse as XML — not the older "===== REQUEST =====" text
+ * format that merely had an .xml extension.
  */
 import type { AmadeusExchange } from "./amadeus-booking";
 import { setAmadeusCapture } from "./amadeus-booking";
@@ -35,19 +36,64 @@ export function makeAmadeusCollector(): AmadeusCollector {
 }
 
 /** Filename-safe operation label (e.g. "PNR_AddMultiElements(commit)" -> "PNR_AddMultiElements_commit"). */
-export function opLabel(x: AmadeusExchange): string {
-  return x.name.replace(/[()]/g, "").replace(/[^A-Za-z0-9_]+/g, "_").replace(/_+$/g, "");
+export function opLabel(name: string): string {
+  return name
+    .replace(/[^A-Za-z0-9_]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
 }
 
-/** Render one exchange in the certification submission text format. */
-export function formatExchange(x: AmadeusExchange, timestamp: string): string {
-  return (
-    `Operation: ${x.name}\n` +
-    `SOAPAction: ${x.action}\n` +
-    `Timestamp: ${timestamp}\n` +
-    `\n===== REQUEST =====\n${x.request}\n` +
-    `\n===== RESPONSE =====\n${x.response}\n`
-  );
+/** "--" terminates an XML comment, so it can never appear inside one. */
+function commentSafe(v: string): string {
+  return v.replace(/--+/g, (m) => m.split("").join(" "));
+}
+
+export interface EnvelopeMeta {
+  case?: string;
+  step: number;
+  stepCount?: number;
+  operation: string;
+  action: string;
+  endpoint?: string;
+  direction: "request" | "response";
+  sessionStatus?: "Start" | "InSeries" | "End";
+  timestamp?: string;
+  /** Free-form lines appended to the comment (preview, expected response, notes). */
+  notes?: Record<string, string>;
+}
+
+/** XML comment header carrying everything the PDF used to show above the payload. */
+export function envelopeHeader(meta: EnvelopeMeta): string {
+  const rows: [string, string | undefined][] = [
+    ["Case", meta.case],
+    ["Step", meta.stepCount ? `${meta.step} of ${meta.stepCount}` : String(meta.step)],
+    ["Operation", meta.operation],
+    ["Direction", meta.direction === "request" ? "REQUEST (RQ)" : "RESPONSE (RS)"],
+    ["SOAPAction", meta.action],
+    ["Endpoint", meta.endpoint ? `POST ${meta.endpoint}` : undefined],
+    ["Content-Type", meta.direction === "request" ? "text/xml; charset=utf-8" : undefined],
+    ["Session", meta.sessionStatus],
+    ["Timestamp", meta.timestamp],
+    ...Object.entries(meta.notes || {}).map(([k, v]) => [k, v] as [string, string]),
+  ];
+  const width = Math.max(...rows.filter(([, v]) => v).map(([k]) => k.length));
+  const body = rows
+    .filter(([, v]) => v)
+    .map(([k, v]) => `  ${k.padEnd(width)} : ${commentSafe(String(v))}`)
+    .join("\n");
+  return `<!--\n  TouristLeader × Amadeus — IBE Prime booking certification\n${body}\n-->`;
+}
+
+/** Strip a leading XML declaration so the comment header can precede the envelope. */
+function splitDeclaration(xml: string): { declaration: string; rest: string } {
+  const m = xml.match(/^\s*<\?xml[^?]*\?>\s*/);
+  return m ? { declaration: m[0].trim(), rest: xml.slice(m[0].length) } : { declaration: '<?xml version="1.0" encoding="UTF-8"?>', rest: xml.trimStart() };
+}
+
+/** One `.xml` submission file: declaration, comment header, then the raw envelope. */
+export function renderEnvelopeFile(xml: string, meta: EnvelopeMeta): string {
+  const { declaration, rest } = splitDeclaration(xml);
+  return `${declaration}\n${envelopeHeader(meta)}\n${rest}\n`;
 }
 
 export interface CertFile {
@@ -55,10 +101,40 @@ export interface CertFile {
   content: string;
 }
 
-/** Build the numbered submission files for one captured booking run. */
-export function buildAmadeusBundle(exchanges: AmadeusExchange[], timestamps?: string[]): CertFile[] {
-  return exchanges.map((x, i) => ({
-    filename: `${i + 1}.${opLabel(x)}.xml`,
-    content: formatExchange(x, timestamps?.[i] ?? ""),
-  }));
+export interface AmadeusBundleOptions {
+  /** Case id / title recorded in every file header. */
+  case?: string;
+  endpoint?: string;
+  /** ISO timestamp per exchange. */
+  timestamps?: string[];
+}
+
+/**
+ * Build the numbered submission files for one captured booking run — a request and
+ * a response file per SOAP message, each a standalone XML document.
+ */
+export function buildAmadeusBundle(exchanges: AmadeusExchange[], opts: AmadeusBundleOptions = {}): CertFile[] {
+  const files: CertFile[] = [];
+  exchanges.forEach((x, i) => {
+    const step = i + 1;
+    const label = opLabel(x.name);
+    const base: Omit<EnvelopeMeta, "direction"> = {
+      case: opts.case,
+      step,
+      stepCount: exchanges.length,
+      operation: x.name,
+      action: x.action,
+      endpoint: opts.endpoint,
+      timestamp: opts.timestamps?.[i],
+    };
+    files.push({
+      filename: `${step}.${label}.RQ.xml`,
+      content: renderEnvelopeFile(x.request, { ...base, direction: "request" }),
+    });
+    files.push({
+      filename: `${step}.${label}.RS.xml`,
+      content: renderEnvelopeFile(x.response, { ...base, direction: "response" }),
+    });
+  });
+  return files;
 }
