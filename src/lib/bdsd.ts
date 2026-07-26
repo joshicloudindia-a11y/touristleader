@@ -1,12 +1,29 @@
 /**
  * BDSD Technology (Tourista) Bus API client.
- * Panel: https://api.bdsd.technology  (agent login provides API docs + token).
+ * Panel: https://api.bdsd.technology  (agent login → dashboard hosts the API docs).
  *
- * The API is reachable, but the exact bus endpoints (Authenticate, city list,
- * AvailableTrips/Search, SeatLayout, BlockTicket, BookTicket) are documented in
- * the agent dashboard. Until those are confirmed, live calls are gated behind
- * BUS_LIVE=1 and we fall back to realistic generated data so the UI is fully
- * functional. Fill in the TODO endpoint paths from the BDSD docs to go live.
+ * STATUS — live credentials received 2026-07-26, endpoint contract still unknown.
+ *
+ * Verified by probing on 2026-07-26:
+ *   - `${BDSD_BASE_URL}/` responds 200 ("Welcome to Travel Technology Solution
+ *     API"), so the API root is real and reachable from our network.
+ *   - No OpenAPI/Swagger is exposed: /swagger, /swagger/v1/swagger.json and
+ *     /docs all 404.
+ *   - The guessed auth paths below all return 404: /Authenticate, /authenticate,
+ *     /login, /token, /GetToken, /v1/authenticate, /agent/authenticate,
+ *     /Bus/Authenticate. The real paths are published only in the dashboard.
+ *   - No public documentation exists for this API anywhere on the web.
+ *
+ * So every path in this file is still an UNVERIFIED GUESS and will 404. Do not
+ * treat the calls below as an integration. To finish, pull the request/response
+ * spec from the dashboard (Authenticate, city list, AvailableTrips/Search,
+ * SeatLayout, BoardingPoints, BlockTicket, BookTicket, Cancel, BookingDetails)
+ * and replace both the paths and `normalizeBuses`.
+ *
+ * Live calls stay gated behind BUS_LIVE=1 and fall back to generated data, so
+ * the UI is fully functional meanwhile. Keep BUS_LIVE=0 until the contract is
+ * confirmed: these are production credentials and a successful BookTicket
+ * debits the agency wallet for real.
  */
 import { generateBuses } from "./mock-bus";
 import type { BusSearchQuery, BusTrip } from "./bus-types";
