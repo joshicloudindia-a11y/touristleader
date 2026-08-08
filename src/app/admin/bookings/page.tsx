@@ -79,9 +79,17 @@ export default function AdminBookingsPage() {
                         <FileText size={13} /> Customer
                       </button>
                       {b.bookedByAgentId && (
-                        <button onClick={() => openInvoice(buildAgentB2BInvoiceHtml(b, window.location.origin), `${b.bookingRef}-B2B`)} className="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-2.5 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-200" title="Agent B2B invoice — service charge & commission">
-                          <FileText size={13} /> Agent B2B
-                        </button>
+                        <>
+                          {/* What the agent owes us — statutory GST invoice, rendered
+                              server-side because it carries our GSTIN/PAN/CIN. */}
+                          <a href={`/api/admin/bookings/tax-invoice?ref=${encodeURIComponent(b.bookingRef)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200" title="GST tax invoice issued to the agent for this booking">
+                            <FileText size={13} /> Tax Invoice
+                          </a>
+                          {/* What we owe the agent — commission & markup statement. */}
+                          <button onClick={() => openInvoice(buildAgentB2BInvoiceHtml(b, window.location.origin), `${b.bookingRef}-B2B`)} className="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-2.5 py-1.5 text-xs font-semibold text-violet-700 hover:bg-violet-200" title="Agent earnings statement — service charge & commission">
+                            <FileText size={13} /> Earnings
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>

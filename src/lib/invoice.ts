@@ -17,6 +17,8 @@ export interface InvoiceData {
   phone?: string;
   // Resolved billing party (server-side). When present it overrides name/email/phone in the "Billed To" card.
   billTo?: BillTo;
+  // Whose name heads the document — the agency for agent bookings, us otherwise.
+  brand?: DocBrand;
   // booking kind controls labels (defaults to FLIGHT for backward compat)
   kind?: "FLIGHT" | "BUS" | "HOTEL";
   // generic details card: pass detailsTitle + detailLines for bus/hotel
@@ -167,7 +169,7 @@ export function buildInvoiceDataFromBooking(b: BookingLike): InvoiceData {
   return {
     ref: b.bookingRef, pnr: b.pnr || "—", kind, detailsTitle, detailLines,
     name: b.passengers?.[0]?.fullName || "Guest", email: b.contactEmail, phone: b.contactPhone,
-    billTo: b.billTo,
+    billTo: b.billTo, brand: brandForBooking(b),
     dateLabel: formatDate(b.departDate), pax, travellers,
     base, taxes, infants, infantFare: infantTotal, addOns, convenience, total,
     serviceCharge, igst: b.igst || 0, cgst: b.cgst || 0, sgst: b.sgst || 0,
@@ -241,8 +243,8 @@ export function buildInvoiceHtml(d: InvoiceData, origin: string): string {
   <div class="inv">
     <div class="top">
       <div class="brand">
-        <img src="${origin}/logo.avif" alt="Tourist Leader"/>
-        <div><div class="name">Tourist Leader</div><div class="sub">Comfort before, during, and after take off</div></div>
+        ${d.brand?.showLogo === false ? "" : `<img src="${origin}/logo.avif" alt="${d.brand?.name || "Tourist Leader"}"/>`}
+        <div><div class="name">${d.brand?.name || "Tourist Leader"}</div><div class="sub">${d.brand?.lines?.length ? d.brand.lines.join(" &middot; ") : "Comfort before, during, and after take off"}</div></div>
       </div>
       <div class="meta">
         <div class="lbl">Invoice / Booking ID</div><div class="val">${d.ref}</div>
@@ -316,16 +318,163 @@ const INVOICE_CSS = `
 function invoiceHead(title: string) {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>${INVOICE_CSS}</style></head><body>`;
 }
-function invoiceBrandTop(subtitle: string, metaRows: string, badge = "PAID") {
+/**
+ * Whose name heads a customer-facing document.
+ *
+ * For an agent booking the customer deals with the agency, not us, so the
+ * agency's own name and contact lines go on top — the same white-label the
+ * client sees on the e-tickets MakeMyTrip issues through them. Direct bookings
+ * stay branded Tourist Leader.
+ */
+export interface DocBrand {
+  name: string;
+  lines?: string[];
+  /** Agent documents drop our logo; it is not their brand. */
+  showLogo: boolean;
+}
+
+export function brandForBooking(b: { billTo?: BillTo; bookedByAgentId?: string | null }): DocBrand {
+  if (b.bookedByAgentId && b.billTo?.name) {
+    // billTo.lines carry the agency address / GSTIN / phone / email.
+    return { name: b.billTo.name, lines: b.billTo.lines, showLogo: false };
+  }
+  return { name: "Tourist Leader", showLogo: true };
+}
+
+function invoiceBrandTop(subtitle: string, metaRows: string, badge = "PAID", brand?: DocBrand) {
+  const name = brand?.name || "Tourist Leader";
+  const logo = (brand?.showLogo ?? true) ? `<img src="__ORIGIN__/logo.avif" alt="${name}"/>` : "";
+  const sub = brand?.lines?.length ? `${brand.lines.join(" &middot; ")}<br/>${subtitle}` : subtitle;
   return `<div class="top">
       <div class="brand">
-        <img src="__ORIGIN__/logo.avif" alt="Tourist Leader"/>
-        <div><div class="name">Tourist Leader</div><div class="sub">${subtitle}</div></div>
+        ${logo}
+        <div><div class="name">${name}</div><div class="sub">${sub}</div></div>
       </div>
       <div class="meta">${metaRows}<div class="paid">&#9679; ${badge}</div></div>
     </div>`;
 }
 const printScript = `<script>window.onload=function(){setTimeout(function(){window.print()},350)}</script></body></html>`;
+
+/** Platform legal identity, passed in from the server (never read from env here). */
+export interface InvoiceCompany {
+  legalName: string;
+  addressLines: string[];
+  gstin: string;
+  pan: string;
+  cin: string;
+  sac: string;
+  serviceDescription: string;
+  placeOfSupply: string;
+  complete: boolean;
+}
+
+/**
+ * GST tax invoice issued BY the platform TO the agent for a booking — the same
+ * document MakeMyTrip issues to us when we book as their agent.
+ *
+ * This is distinct from `buildAgentB2BInvoiceHtml`, which is the agent's
+ * *earnings* statement (what we owe them). This one is what the booking was
+ * billed at, in the statutory format the agent files with their GST returns:
+ * fare charges, handling, service fee, then GST — charged only on the fees we
+ * levy, never on the airfare — and a separate base-fare/tax breakup.
+ *
+ * `company` must come from the server; the invoice prints a visible marker for
+ * any statutory field that is still unconfigured.
+ */
+export function buildAgentTaxInvoiceHtml(b: BookingLike, origin: string, company: InvoiceCompany, invoiceNo: string): string {
+  const d = buildInvoiceDataFromBooking(b);
+  const kind = ((b.bookingType as InvoiceData["kind"]) || "FLIGHT") as "FLIGHT" | "BUS" | "HOTEL";
+  // Airline portion only, so the tax breakup below reconciles to it exactly the
+  // way MakeMyTrip's does. Add-ons (seats/meals/baggage) are billed separately.
+  const fareCharges = d.base + d.taxes + (d.infantFare || 0);
+  const addOns = d.addOns;
+  const handling = d.convenience;
+  const serviceFees = d.serviceCharge || 0;
+  const gstRows = [
+    ...(d.igst ? [["IGST @18%", formatINR(d.igst)]] : []),
+    ...(d.cgst ? [["CGST @9%", formatINR(d.cgst)]] : []),
+    ...(d.sgst ? [["SGST @9%", formatINR(d.sgst)]] : []),
+  ];
+  const agency = b.billTo;
+  const pax = (d.travellers || []).length ? d.travellers! : [{ name: d.name }];
+
+  const field = (label: string, value: string) =>
+    `<div class="lbl">${label}</div><div class="val">${value || "—"}</div>`;
+
+  return `${invoiceHead(`Tax Invoice ${invoiceNo}`)}
+  <div class="inv">
+    <div class="top">
+      <div class="brand">
+        <img src="${origin}/logo.avif" alt="${company.legalName}"/>
+        <div><div class="name">TAX INVOICE</div><div class="sub">${company.legalName}<br/>${company.addressLines.join(", ")}</div></div>
+      </div>
+      <div class="meta">
+        ${field("Invoice No.", invoiceNo)}
+        ${field("Date", formatDate(b.createdAt))}
+        <div class="paid">&#9679; TAX INVOICE</div>
+      </div>
+    </div>
+    <div class="body">
+      ${company.complete ? "" : `<div class="card" style="background:#fff7ed;border-color:#f59e0b;margin-bottom:12px"><div class="line"><b>This invoice is not yet compliant.</b> The company GSTIN / PAN / registered address are not configured, so the fields below show a placeholder. Set COMPANY_* in the environment before issuing this to an agent.</div></div>`}
+      <div class="cards">
+        <div class="card"><h4>Invoice details</h4>
+          ${field("Booking ID", b.bookingRef)}
+          ${field(PNR_LABEL[kind], b.pnr || "—")}
+          ${field("Place of Supply", company.placeOfSupply)}
+          ${field("Transactional Type/Category", "B2B/REG")}
+        </div>
+        <div class="card"><h4>Supplier</h4>
+          ${field("PAN", company.pan)}
+          ${field("GSTIN", company.gstin)}
+          ${field("CIN", company.cin)}
+          ${field("HSN/SAC", company.sac)}
+          ${field("Service Description", company.serviceDescription)}
+          ${field("Tax Payable under RCM", "No")}
+        </div>
+        <div class="card"><h4>${agency?.label || "Billed To (Agent)"}</h4>
+          <div class="line"><b>${agency?.name || "Agent"}</b></div>
+          ${(agency?.lines || []).map((l) => `<div class="line">${l}</div>`).join("")}
+        </div>
+      </div>
+
+      <h3>${cityName(b.origin)} (${b.origin}) &rarr; ${cityName(b.destination)} (${b.destination}) &middot; ${formatDate(b.departDate)}</h3>
+      <table>
+        <thead><tr><td>Passenger Name(s)</td><td>Ticket No.</td><td class="r">${PNR_LABEL[kind]}</td></tr></thead>
+        <tbody>${pax.map((p) => `<tr><td>${p.name}</td><td>${b.pnr || "—"}</td><td class="r">${b.pnr || "—"}</td></tr>`).join("")}</tbody>
+      </table>
+
+      <h3>Payment breakup</h3>
+      <table>
+        <tbody>
+          <tr><td>Fare Charges<span class="s">including applicable taxes collected on behalf of the airline</span></td><td class="r">${formatINR(fareCharges)}</td></tr>
+          ${addOns > 0 ? `<tr><td>Add-ons<span class="s">seats, meals, baggage</span></td><td class="r">${formatINR(addOns)}</td></tr>` : ""}
+          ${handling > 0 ? `<tr><td>Transaction handling charges</td><td class="r">${formatINR(handling)}</td></tr>` : ""}
+          ${serviceFees > 0 ? `<tr><td>Service Fees</td><td class="r">${formatINR(serviceFees)}</td></tr>` : ""}
+          ${gstRows.map((r) => `<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join("")}
+        </tbody>
+      </table>
+      <div class="total"><span class="t1">Grand Total</span><span class="t2">${formatINR(d.total)}</span></div>
+
+      <h3>Tax breakup</h3>
+      <table>
+        <thead><tr><td>Tax Category</td><td class="r">Amount</td></tr></thead>
+        <tbody>
+          <tr><td>Total Base Fare</td><td class="r">${formatINR(d.base + (d.infantFare || 0))}</td></tr>
+          <tr><td>Other Tax</td><td class="r">${formatINR(d.taxes)}</td></tr>
+          <tr><td><b>Grand Total</b></td><td class="r"><b>${formatINR(fareCharges)}</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="foot">
+      GST is charged only on the fees levied by ${company.legalName}; the airfare component carries taxes collected on behalf of the airline.
+      Input tax credit of GST charged by the original service provider is available only against the invoice issued by that provider —
+      ${company.legalName} acts as a facilitator for these services.<br/>
+      This is not a valid travel document. System generated invoice; no signature required.<br/>
+      &copy; ${new Date().getFullYear()} ${company.legalName}
+    </div>
+  </div>
+  ${printScript}`;
+}
 
 /**
  * Agent-facing B2B / commission invoice for an agent booking: bills the agency and
