@@ -383,10 +383,12 @@ model GroupEnquiry {
   departDate     String
   returnDate     String?
   cabinClass     String   @default("Economy")
+  journeyType    String   @default("DOMESTIC") // DOMESTIC | INTERNATIONAL
   adults         Int      @default(10)
   children       Int      @default(0)
   infants        Int      @default(0)
-  passengerNames Json?    // string[] of traveller names supplied with the query
+  passengerNames Json?    // legacy: string[] of names, kept for enquiries filed before documents were collected
+  passengers     Json?    // GroupPassenger[]: name + travel document per traveller (see src/lib/group.ts)
   name           String   // contact person
   email          String
   phone          String
@@ -394,6 +396,7 @@ model GroupEnquiry {
   message        String?  @db.Text
   status         String   @default("NEW") // NEW | CONTACTED | QUOTED | BOOKED | CLOSED
   source         String   @default("WEB")
+  submittedBy    String   @default("CUSTOMER") // CUSTOMER | AGENT — who filed the enquiry
   assignedTo     String?
   note           String?  @db.Text
   createdAt      DateTime @default(now())

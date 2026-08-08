@@ -1,14 +1,16 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Mail, Phone, Plane, Calendar, Users as UsersIcon, StickyNote, Check, X, Building2 } from "lucide-react";
+import { Loader2, Mail, Phone, Plane, Calendar, Users as UsersIcon, StickyNote, Check, X, Building2, Download, Globe2, BadgeCheck } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { GROUP_STATUSES, GROUP_STATUS_META } from "@/lib/group";
+import { GROUP_STATUSES, GROUP_STATUS_META, VISA_NOTE, documentSummary, type GroupPassenger, type JourneyType } from "@/lib/group";
 import { formatDate, cn } from "@/lib/utils";
 
 interface Group {
   id: string; enquiryNo: string; tripType: string; origin: string; destination: string;
   departDate: string; returnDate: string | null; cabinClass: string;
-  adults: number; children: number; infants: number; passengerNames: string[] | null;
+  journeyType: string; submittedBy: string;
+  adults: number; children: number; infants: number;
+  passengerNames: string[] | null; passengers: GroupPassenger[] | null;
   name: string; email: string; phone: string; company: string | null;
   message: string | null; note: string | null; status: string; createdAt: string;
 }
@@ -16,10 +18,11 @@ interface Group {
 export default function AdminGroupEnquiriesPage() {
   const [rows, setRows] = useState<Group[]>([]);
   const [canManage, setCanManage] = useState(false);
+  const [masked, setMasked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
 
-  const load = () => { setLoading(true); fetch("/api/admin/group-enquiries", { cache: "no-store" }).then((r) => r.json()).then((d) => { setRows(d.enquiries || []); setCanManage(!!d.canManage); }).finally(() => setLoading(false)); };
+  const load = () => { setLoading(true); fetch("/api/admin/group-enquiries", { cache: "no-store" }).then((r) => r.json()).then((d) => { setRows(d.enquiries || []); setCanManage(!!d.canManage); setMasked(!!d.documentsMasked); }).finally(() => setLoading(false)); };
   useEffect(load, []);
 
   const patch = async (id: string, data: Partial<Group>) => {
@@ -31,10 +34,24 @@ export default function AdminGroupEnquiriesPage() {
   const filtered = rows.filter((e) => filter === "ALL" || e.status === filter);
 
   return (
-    <AdminShell title="Group Booking Queries">
-      <div className="no-scrollbar mb-4 flex gap-1.5 overflow-x-auto">
-        {["ALL", ...GROUP_STATUSES].map((s) => <button key={s} onClick={() => setFilter(s)} className={cn("shrink-0 rounded-full px-3 py-1.5 text-xs font-bold", filter === s ? "bg-brand text-white" : "bg-white text-slate-500 ring-1 ring-slate-200")}>{s === "ALL" ? "All" : GROUP_STATUS_META[s as keyof typeof GROUP_STATUS_META]?.label || s} {counts[s] ? <span className="opacity-70">{counts[s]}</span> : ""}</button>)}
+    <AdminShell title="Bulk / Group Booking Enquiries">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="no-scrollbar flex flex-1 gap-1.5 overflow-x-auto">
+          {["ALL", ...GROUP_STATUSES].map((s) => <button key={s} onClick={() => setFilter(s)} className={cn("shrink-0 rounded-full px-3 py-1.5 text-xs font-bold", filter === s ? "bg-brand text-white" : "bg-white text-slate-500 ring-1 ring-slate-200")}>{s === "ALL" ? "All" : GROUP_STATUS_META[s as keyof typeof GROUP_STATUS_META]?.label || s} {counts[s] ? <span className="opacity-70">{counts[s]}</span> : ""}</button>)}
+        </div>
+        {/* Exports whatever the status filter is showing, one row per traveller. */}
+        <a
+          href={`/api/admin/group-enquiries/export${filter === "ALL" ? "" : `?status=${filter}`}`}
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+        >
+          <Download size={13} /> Download Excel
+        </a>
       </div>
+      {masked && (
+        <p className="mb-3 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-500">
+          Passport and ID numbers are partly hidden for your role. The Excel download is masked the same way.
+        </p>
+      )}
 
       {loading ? <div className="flex justify-center py-16 text-slate-400"><Loader2 className="animate-spin" /></div> : filtered.length === 0 ? (
         <p className="rounded-2xl bg-white p-10 text-center text-slate-400 shadow-sm">No group booking queries yet.</p>
@@ -44,6 +61,9 @@ export default function AdminGroupEnquiriesPage() {
             const total = e.adults + e.children + e.infants;
             const mix = `${e.adults} adult${e.adults !== 1 ? "s" : ""}${e.children ? `, ${e.children} child` : ""}${e.infants ? `, ${e.infants} infant` : ""}`;
             const names = e.passengerNames || [];
+            const docs = e.passengers || [];
+            const journeyType = (e.journeyType || "DOMESTIC") as JourneyType;
+            const intl = journeyType === "INTERNATIONAL";
             return (
               <div key={e.id} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -52,6 +72,10 @@ export default function AdminGroupEnquiriesPage() {
                       <Plane size={16} className="text-brand" /> {e.origin} → {e.destination}
                       <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-500">{e.enquiryNo}</span>
                       <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand">{e.tripType === "ROUND_TRIP" ? "Round trip" : "One way"} · {e.cabinClass}</span>
+                      <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold", intl ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600")}>
+                        <Globe2 size={10} /> {intl ? "International" : "Domestic"}
+                      </span>
+                      {e.submittedBy === "AGENT" && <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700"><BadgeCheck size={10} /> Agent</span>}
                     </p>
                     <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
                       <span className="flex items-center gap-1 font-semibold text-slate-700"><UsersIcon size={11} /> {total} travellers</span>
@@ -65,7 +89,22 @@ export default function AdminGroupEnquiriesPage() {
                       <a href={`mailto:${e.email}`} className="flex items-center gap-1 hover:text-brand"><Mail size={11} /> {e.email}</a>
                       <a href={`tel:${e.phone}`} className="flex items-center gap-1 hover:text-brand"><Phone size={11} /> {e.phone}</a>
                     </p>
-                    {names.length > 0 && (
+                    {docs.length > 0 ? (
+                      <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2">
+                        <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">Travellers &amp; documents ({docs.length})</p>
+                        <ul className="space-y-0.5 text-xs text-slate-600">
+                          {docs.map((p, i) => (
+                            <li key={i} className="flex flex-wrap gap-x-2">
+                              <span className="font-semibold text-slate-700">{i + 1}. {p.name}</span>
+                              <span className="text-slate-400">{p.paxType?.toLowerCase()}</span>
+                              <span>{documentSummary(p, journeyType) || <em className="text-amber-600">document pending</em>}</span>
+                              {p.nationality && <span className="text-slate-400">· {p.nationality}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                        {intl && <p className="mt-1.5 rounded bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700">{VISA_NOTE}</p>}
+                      </div>
+                    ) : names.length > 0 && (
                       <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2">
                         <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">Passenger names ({names.length})</p>
                         <p className="text-xs text-slate-600">{names.map((n, i) => `${i + 1}. ${n}`).join("  ·  ")}</p>

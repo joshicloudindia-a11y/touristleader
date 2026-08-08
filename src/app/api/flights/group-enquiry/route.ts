@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
-import { GROUP_MIN_TRAVELLERS } from "@/lib/group";
+import { getSessionUser, isAdmin } from "@/lib/auth";
+import { GROUP_MIN_TRAVELLERS, JOURNEY_TYPES, documentSummary, validatePassengers, type GroupPassenger, type JourneyType, type PaxType } from "@/lib/group";
 import { sendGroupEnquiryEmails } from "@/lib/mailer";
 
 export const dynamic = "force-dynamic";
@@ -39,11 +39,46 @@ export async function POST(req: NextRequest) {
       ? b.passengerNames.map((n: unknown) => String(n || "").trim()).filter(Boolean)
       : [];
 
+    const journeyType: JourneyType = JOURNEY_TYPES.includes(b.journeyType) ? b.journeyType : "DOMESTIC";
+
+    // Travel documents per traveller: any photo ID domestically, passport
+    // (number + expiry) for international. Re-validated here because the form
+    // is client-side and this route is publicly reachable.
+    const str = (v: unknown) => String(v ?? "").trim();
+    const passengers: GroupPassenger[] = Array.isArray(b.passengers)
+      ? b.passengers.slice(0, 200).map((p: Record<string, unknown>) => ({
+          name: str(p?.name),
+          paxType: (["ADULT", "CHILD", "INFANT"].includes(str(p?.paxType)) ? str(p?.paxType) : "ADULT") as PaxType,
+          idType: str(p?.idType) || undefined,
+          idNumber: str(p?.idNumber) || undefined,
+          passportNo: str(p?.passportNo).toUpperCase() || undefined,
+          passportExpiry: str(p?.passportExpiry) || undefined,
+          nationality: str(p?.nationality) || undefined,
+        }))
+      : [];
+
+    if (passengers.length) {
+      const errors = validatePassengers(passengers, journeyType);
+      const first = Object.values(errors)[0];
+      if (first) return NextResponse.json({ error: first, errors }, { status: 400 });
+    } else if (journeyType === "INTERNATIONAL") {
+      return NextResponse.json(
+        { error: "International bulk enquiries need passport details for every traveller." },
+        { status: 400 }
+      );
+    }
+
     const user = await getSessionUser();
+    // Agents file bulk enquiries on behalf of their customers; the admin list
+    // and the export separate the two.
+    const { tier } = await isAdmin();
+    const submittedBy = tier === "agent" ? "AGENT" : "CUSTOMER";
     const no = enquiryNo();
     const data = {
       enquiryNo: no,
       userId: user?.id || null,
+      journeyType,
+      submittedBy,
       tripType,
       origin: b.from.trim().toUpperCase(),
       destination: b.to.trim().toUpperCase(),
@@ -54,6 +89,7 @@ export async function POST(req: NextRequest) {
       children,
       infants,
       passengerNames,
+      passengers,
       name: b.name.trim(),
       email: b.email.trim().toLowerCase(),
       phone: b.phone.trim(),
@@ -71,6 +107,8 @@ export async function POST(req: NextRequest) {
       departDate: data.departDate, returnDate: data.returnDate || undefined, cabinClass: data.cabinClass,
       travellers: total, adults, children, infants, passengerNames,
       name: data.name, email: data.email, phone: data.phone, company: data.company || undefined, message: data.message || undefined,
+      journeyType,
+      documents: passengers.map((p) => `${p.name} — ${documentSummary(p, journeyType) || "document pending"}`),
     }).catch(() => {});
 
     return NextResponse.json({ enquiryNo: no, saved });

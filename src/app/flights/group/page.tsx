@@ -8,7 +8,10 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/Button";
 import { AirportSelect } from "@/components/home/AirportSelect";
 import { CABIN_CLASSES } from "@/lib/constants";
-import { GROUP_MIN_TRAVELLERS } from "@/lib/group";
+import {
+  GROUP_MIN_TRAVELLERS, DOMESTIC_ID_TYPES, VISA_NOTE, validatePassengers,
+  type GroupPassenger, type JourneyType, type PaxType,
+} from "@/lib/group";
 import { paxTypes } from "@/lib/fare-rules";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +39,8 @@ function GroupForm() {
   const [adults, setAdults] = useState(GROUP_MIN_TRAVELLERS);
   const [children, setChildren] = useState(0);
   const [infants, setInfants] = useState(0);
-  const [names, setNames] = useState<string[]>([]);
+  const [journeyType, setJourneyType] = useState<JourneyType>("DOMESTIC");
+  const [pax, setPax] = useState<GroupPassenger[]>([]);
   const [contact, setContact] = useState({ name: "", email: "", phone: "", company: "", message: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -61,14 +65,22 @@ function GroupForm() {
   }, [sp]);
 
   const total = adults + children + infants;
+  const intl = journeyType === "INTERNATIONAL";
   const types = useMemo(() => paxTypes({ adults, children, infants }), [adults, children, infants]);
 
-  // Keep the name inputs sized to the traveller count (preserve typed names by index).
+  // Keep the traveller rows sized to the count, preserving what is already typed
+  // and re-labelling each row's pax type as the adult/child/infant mix changes.
   useEffect(() => {
-    setNames((prev) => Array.from({ length: total }, (_, i) => prev[i] || ""));
-  }, [total]);
+    setPax((prev) =>
+      Array.from({ length: total }, (_, i) => ({
+        ...(prev[i] ?? { name: "" }),
+        paxType: ((types[i] || "Adult").toUpperCase() as PaxType),
+      }))
+    );
+  }, [total, types]);
 
-  const setName = (i: number, v: string) => setNames((n) => n.map((x, idx) => (idx === i ? v : x)));
+  const setPaxField = (i: number, field: keyof GroupPassenger, v: string) =>
+    setPax((list) => list.map((p, idx) => (idx === i ? { ...p, [field]: v } : p)));
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -77,6 +89,8 @@ function GroupForm() {
     if (!emailRe.test(contact.email.trim())) e.email = "Enter a valid email";
     if (contact.phone.replace(/\D/g, "").length < 10) e.phone = "Enter a valid 10-digit number";
     if (tripType === "ROUND_TRIP" && !returnDate) e.returnDate = "Pick a return date";
+    // Same rules the API enforces: any photo ID domestically, passport abroad.
+    Object.assign(e, validatePassengers(pax, journeyType));
     return e;
   };
 
@@ -91,7 +105,8 @@ function GroupForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tripType, from, to, departDate, returnDate: tripType === "ROUND_TRIP" ? returnDate : "",
-          cabinClass, adults, children, infants, passengerNames: names,
+          cabinClass, adults, children, infants,
+          journeyType, passengers: pax, passengerNames: pax.map((p) => p.name),
           name: contact.name, email: contact.email, phone: contact.phone, company: contact.company, message: contact.message,
         }),
       });
@@ -131,10 +146,17 @@ function GroupForm() {
       <div className="space-y-4">
         {/* Trip */}
         <Card title="Trip details">
-          <div className="mb-3 flex gap-2">
+          <div className="mb-3 flex flex-wrap gap-2">
             {(["ONE_WAY", "ROUND_TRIP"] as const).map((t) => (
               <button key={t} onClick={() => setTripType(t)} className={cn("rounded-full px-4 py-1.5 text-sm font-semibold", tripType === t ? "bg-brand text-white" : "bg-slate-100 text-slate-600")}>
                 {t === "ONE_WAY" ? "One Way" : "Round Trip"}
+              </button>
+            ))}
+            {/* Decides which travel document the traveller rows ask for. */}
+            <span className="mx-1 hidden w-px self-stretch bg-slate-200 sm:block" />
+            {(["DOMESTIC", "INTERNATIONAL"] as const).map((j) => (
+              <button key={j} onClick={() => setJourneyType(j)} className={cn("rounded-full px-4 py-1.5 text-sm font-semibold", journeyType === j ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600")}>
+                {j === "DOMESTIC" ? "Domestic" : "International"}
               </button>
             ))}
           </div>
@@ -175,13 +197,54 @@ function GroupForm() {
           {errors.total && <ErrLine msg={errors.total} />}
         </Card>
 
-        {/* Names */}
-        <Card title="Passenger names" sub="Share all traveller names — you can update them later.">
-          <div className="grid gap-2 sm:grid-cols-2">
-            {names.map((n, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="w-6 shrink-0 text-right text-xs font-semibold text-slate-400">{i + 1}.</span>
-                <input value={n} onChange={(e) => setName(i, e.target.value)} placeholder={`${types[i] || "Adult"} name`} className="inp" />
+        {/* Travellers & travel documents */}
+        <Card
+          title="Traveller details"
+          sub={intl
+            ? "Passport number and expiry are mandatory for every international traveller."
+            : "Any government photo ID is accepted for domestic travel."}
+        >
+          {intl && (
+            <p className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+              <AlertCircle size={14} className="mt-px shrink-0" /> {VISA_NOTE}
+            </p>
+          )}
+          <div className="space-y-3">
+            {pax.map((p, i) => (
+              <div key={i} className="rounded-xl border border-slate-200 p-3">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">
+                  Traveller {i + 1} · {(p.paxType || "ADULT").toLowerCase()}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Full name (as on document)" error={errors[`p${i}.name`]}>
+                    <input value={p.name} onChange={(e) => setPaxField(i, "name", e.target.value)} className="inp" placeholder="Full name" />
+                  </Field>
+                  {intl ? (
+                    <>
+                      <Field label="Passport number" error={errors[`p${i}.passportNo`]}>
+                        <input value={p.passportNo || ""} onChange={(e) => setPaxField(i, "passportNo", e.target.value.toUpperCase())} className="inp" placeholder="e.g. M1234567" />
+                      </Field>
+                      <Field label="Passport expiry" error={errors[`p${i}.passportExpiry`]}>
+                        <input type="date" value={p.passportExpiry || ""} onChange={(e) => setPaxField(i, "passportExpiry", e.target.value)} className="inp" />
+                      </Field>
+                      <Field label="Nationality (optional)">
+                        <input value={p.nationality || ""} onChange={(e) => setPaxField(i, "nationality", e.target.value)} className="inp" placeholder="Indian" />
+                      </Field>
+                    </>
+                  ) : (
+                    <>
+                      <Field label="ID type" error={errors[`p${i}.idType`]}>
+                        <select value={p.idType || ""} onChange={(e) => setPaxField(i, "idType", e.target.value)} className="inp">
+                          <option value="">Select ID</option>
+                          {DOMESTIC_ID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="ID number" error={errors[`p${i}.idNumber`]}>
+                        <input value={p.idNumber || ""} onChange={(e) => setPaxField(i, "idNumber", e.target.value)} className="inp" placeholder="Number on the ID" />
+                      </Field>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>

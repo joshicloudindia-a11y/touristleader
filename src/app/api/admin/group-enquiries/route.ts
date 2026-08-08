@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/auth";
-import { GROUP_STATUSES, type GroupStatus } from "@/lib/group";
+import { GROUP_STATUSES, maskPassenger, type GroupPassenger, type GroupStatus } from "@/lib/group";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const { ok, permissions } = await isAdmin();
+  const { ok, permissions, tier } = await isAdmin();
   if (!ok || !permissions.includes("enquiries.view")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const enquiries = await prisma.groupEnquiry.findMany({ orderBy: { createdAt: "desc" }, take: 300 });
-  return NextResponse.json({ enquiries, canManage: permissions.includes("enquiries.manage") });
+  const rows = await prisma.groupEnquiry.findMany({ orderBy: { createdAt: "desc" }, take: 300 });
+
+  // The AGENT role also holds enquiries.view, so mask passport/ID numbers for
+  // anyone below the admin tier rather than shipping the raw values.
+  const full = tier === "admin";
+  const enquiries = rows.map((e) => {
+    const passengers = (Array.isArray(e.passengers) ? e.passengers : []) as unknown as GroupPassenger[];
+    return { ...e, passengers: full ? passengers : passengers.map(maskPassenger) };
+  });
+
+  return NextResponse.json({ enquiries, canManage: permissions.includes("enquiries.manage"), documentsMasked: !full });
 }
 
 export async function PATCH(req: NextRequest) {
