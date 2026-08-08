@@ -32,10 +32,19 @@ export const BUS_DROPPING = [
   "Jhakarkati Bus Stand", "Rawatpur", "Vijay Nagar", "Kalyanpur", "Ghantaghar",
 ];
 
+/**
+ * Trending routes, carrying BDSD city ids from the master list so a click goes
+ * straight to a live search instead of relying on a name lookup.
+ *
+ * Two names had to change to match BDSD's list:
+ *   - "Bengaluru" does not exist there at all; the city is listed as "Bangalore".
+ *   - "Kanpur" appears twice (142 and 14292) with no distinguishing detail. We
+ *     use 142 pending confirmation from BDSD — see the note in bus-cities.ts.
+ */
 export const BUS_TRENDING = [
-  { from: "Delhi", to: "Kanpur" },
-  { from: "Mumbai", to: "Pune" },
-  { from: "Bengaluru", to: "Goa" },
-  { from: "Delhi", to: "Jaipur" },
-  { from: "Hyderabad", to: "Vijayawada" },
+  { from: "Delhi", fromId: 1354, to: "Kanpur", toId: 142 },
+  { from: "Mumbai", fromId: 3534, to: "Pune", toId: 9771 },
+  { from: "Bangalore", fromId: 8463, to: "Goa", toId: 7956 },
+  { from: "Delhi", fromId: 1354, to: "Jaipur", toId: 7265 },
+  { from: "Hyderabad", fromId: 9573, to: "Vijayawada", toId: 191 },
 ];

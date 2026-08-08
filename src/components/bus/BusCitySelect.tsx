@@ -1,12 +1,36 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { MapPin, Search } from "lucide-react";
-import { BUS_CITIES } from "@/lib/bus-constants";
 import { cn } from "@/lib/utils";
 
-export function BusCitySelect({ label, value, onChange, compact = false }: { label: string; value: string; onChange: (c: string) => void; compact?: boolean }) {
+interface City {
+  id: number;
+  name: string;
+}
+
+/**
+ * City picker backed by BDSD's master list (~15k cities).
+ *
+ * The list is far too big to ship to the browser, so this queries
+ * /api/bus/cities instead of a bundled array. It reports the BDSD city id
+ * alongside the name because 318 names in that list belong to two different
+ * cities — the id is the only thing that identifies one unambiguously.
+ */
+export function BusCitySelect({
+  label,
+  value,
+  onChange,
+  compact = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (city: string, id: number) => void;
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [cities, setCities] = useState<City[]>([]);
+  const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -15,7 +39,20 @@ export function BusCitySelect({ label, value, onChange, compact = false }: { lab
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  const filtered = BUS_CITIES.filter((c) => c.toLowerCase().includes(q.toLowerCase()));
+  // Debounced lookup; an empty query returns BDSD's featured cities.
+  useEffect(() => {
+    if (!open) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setLoading(true);
+      fetch(`/api/bus/cities?q=${encodeURIComponent(q)}`, { signal: controller.signal })
+        .then((r) => r.json())
+        .then((d: { cities: City[] }) => setCities(d.cities ?? []))
+        .catch(() => { /* aborted or offline — keep the previous list */ })
+        .finally(() => setLoading(false));
+    }, 200);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [q, open]);
 
   return (
     <div className="relative min-w-0" ref={ref}>
@@ -31,10 +68,16 @@ export function BusCitySelect({ label, value, onChange, compact = false }: { lab
             <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search city" className="w-full bg-transparent text-sm outline-none" />
           </div>
           <ul className="mt-2 max-h-72 overflow-y-auto">
-            {filtered.map((c) => (
-              <li key={c}><button onClick={() => { onChange(c); setOpen(false); setQ(""); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-brand/5"><MapPin size={16} className="shrink-0 text-slate-400" /><span className="text-sm font-semibold text-slate-800">{c}</span></button></li>
+            {cities.map((c) => (
+              <li key={c.id}>
+                <button onClick={() => { onChange(c.name, c.id); setOpen(false); setQ(""); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-brand/5">
+                  <MapPin size={16} className="shrink-0 text-slate-400" />
+                  <span className="truncate text-sm font-semibold text-slate-800">{c.name}</span>
+                </button>
+              </li>
             ))}
-            {filtered.length === 0 && <li className="px-3 py-4 text-center text-sm text-slate-400">No cities found</li>}
+            {!loading && cities.length === 0 && <li className="px-3 py-4 text-center text-sm text-slate-400">No cities found</li>}
+            {loading && cities.length === 0 && <li className="px-3 py-4 text-center text-sm text-slate-400">Searching…</li>}
           </ul>
         </div>
       )}

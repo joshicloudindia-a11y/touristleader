@@ -11,15 +11,26 @@ function dayOffset(n: number) {
   return d.toISOString().slice(0, 10);
 }
 
-export function ModifyBusSearch({ query }: { query: { from: string; to: string; date: string } }) {
+export function ModifyBusSearch({ query }: { query: { from: string; to: string; date: string; fromId?: number; toId?: number } }) {
   const router = useRouter();
-  const [from, setFrom] = useState(query.from);
-  const [to, setTo] = useState(query.to);
+  // Carry the BDSD city id alongside the name — the name alone is ambiguous for
+  // 318 cities in their master list.
+  const [from, setFrom] = useState({ name: query.from, id: query.fromId });
+  const [to, setTo] = useState({ name: query.to, id: query.toId });
   const [date, setDate] = useState(query.date);
 
-  useEffect(() => { setFrom(query.from); setTo(query.to); setDate(query.date); }, [query]);
+  useEffect(() => {
+    setFrom({ name: query.from, id: query.fromId });
+    setTo({ name: query.to, id: query.toId });
+    setDate(query.date);
+  }, [query]);
 
-  const submit = () => router.push(`/bus/search?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${date}`);
+  const submit = () => {
+    const p = new URLSearchParams({ from: from.name, to: to.name, date });
+    if (from.id) p.set("fromId", String(from.id));
+    if (to.id) p.set("toId", String(to.id));
+    router.push(`/bus/search?${p}`);
+  };
 
   return (
     <div className="border-b border-slate-200 bg-white shadow-sm">
@@ -27,8 +38,8 @@ export function ModifyBusSearch({ query }: { query: { from: string; to: string; 
         <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
           <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:items-stretch">
             <div className="relative grid grid-cols-2 rounded-xl border border-slate-200 sm:col-span-2 lg:min-w-[300px] lg:flex-1">
-              <div className="min-w-0 border-r border-slate-200 pr-4"><BusCitySelect label="From" value={from} onChange={setFrom} compact /></div>
-              <div className="min-w-0 pl-4"><BusCitySelect label="To" value={to} onChange={setTo} compact /></div>
+              <div className="min-w-0 border-r border-slate-200 pr-4"><BusCitySelect label="From" value={from.name} onChange={(name, id) => setFrom({ name, id })} compact /></div>
+              <div className="min-w-0 pl-4"><BusCitySelect label="To" value={to.name} onChange={(name, id) => setTo({ name, id })} compact /></div>
               <button onClick={() => { setFrom(to); setTo(from); }} className="absolute left-1/2 top-1/2 z-20 grid h-7 w-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-brand shadow transition-transform hover:rotate-180" aria-label="Swap"><ArrowLeftRight size={13} /></button>
             </div>
             <div className="rounded-xl border border-slate-200 lg:min-w-[150px]"><DateField label="Travel Date" value={date} min={dayOffset(0)} onChange={setDate} compact /></div>

@@ -24,17 +24,18 @@
  * describe this API. The "Request"/"Response" JSON samples are the real
  * contract; everything below is modelled on those.
  *
- * OPEN ITEMS blocking live traffic (both need the client / BDSD):
- *   1. Credentials are rejected on BOTH stagingapi and api hosts with
- *      "You are not authorized to access this API". Most likely our egress IP
- *      is not whitelisted. BDSD needs to whitelist the dev IP and the
- *      production egress IPs, or issue staging-specific credentials — the
- *      client asked us to use staging but only ever sent live credentials.
- *   2. `search` takes numeric `OriginId`/`DestinationId`, but no city-list
- *      endpoint is documented and none was found. Only two IDs are known, from
- *      the docs' own sample (Bangalore 8463, Hyderabad 9573). We need the bus
- *      city master list before search can accept arbitrary cities — see
- *      `CITY_IDS` below.
+ * CITY IDS: `search` takes numeric `OriginId`/`DestinationId` and no city-list
+ * endpoint exists, so the mapping comes from the master list the client emailed
+ * on 2026-08-08 (14,965 cities). It ships as src/data/bus-cities.json — see
+ * `./bus-cities` for lookup and the caveat that 318 names are shared by two
+ * different ids, which is why callers should pass ids rather than names.
+ *
+ * OPEN ITEM blocking live traffic (needs the client / BDSD):
+ *   Credentials are rejected on BOTH stagingapi and api hosts with "You are not
+ *   authorized to access this API". Most likely our egress IP is not
+ *   whitelisted. BDSD needs to whitelist the dev IP and the production egress
+ *   IPs, or issue staging-specific credentials — the client asked us to use
+ *   staging but only ever sent live credentials.
  *
  * SAFETY: `blockSeat`/`bookTicket`/`cancelTicket` hit the agency wallet for
  * real. They are gated behind BUS_BOOKING_LIVE=1 on top of BUS_LIVE=1 so that
@@ -42,6 +43,7 @@
  * Available Balance 0 on 2026-08-08, so a live book would fail on funds today.
  */
 import { generateBuses } from "./mock-bus";
+import { resolveCityId, describeCityLookup } from "./bus-cities";
 import type { BusSearchQuery, BusTrip, BoardingPoint } from "./bus-types";
 
 const cfg = {
@@ -50,24 +52,6 @@ const cfg = {
   password: process.env.BDSD_PASSWORD || "",
 };
 const TIMEOUT = 20000;
-
-/**
- * Bus city ids for `search`. BDSD documents no city-list endpoint, so this map
- * has to be filled from the master list they supply. The two entries below are
- * the only ids confirmed so far (they are the docs' own example route).
- * A caller may also pass a numeric id straight through.
- */
-const CITY_IDS: Record<string, string> = {
-  bangalore: "8463",
-  bengaluru: "8463",
-  hyderabad: "9573",
-};
-
-export function resolveCityId(city: string): string | null {
-  const raw = (city || "").trim();
-  if (/^\d+$/.test(raw)) return raw;
-  return CITY_IDS[raw.toLowerCase()] ?? null;
-}
 
 export class BdsdError extends Error {
   constructor(readonly code: number, message: string) {
@@ -227,22 +211,42 @@ export interface BusSearchResult {
   reason?: string;
 }
 
+/** A city the caller already picked from the master list, by BDSD id. */
+export interface BusSearchIds {
+  fromId?: number;
+  toId?: number;
+}
+
+/** Prefer the picked id; fall back to resolving the display name. */
+function pickCityId(id: number | undefined, name: string): { id: number | null; why: string } {
+  if (typeof id === "number" && Number.isFinite(id) && id > 0) return { id, why: "ok" };
+  const resolved = resolveCityId(name);
+  return { id: resolved, why: resolved ? "ok" : describeCityLookup(name) };
+}
+
 /**
  * Search available trips. Falls back to generated data whenever live search is
  * off, the cities cannot be resolved to BDSD ids, or the call fails, so the UI
  * always has something to render.
  */
-export async function searchBuses(q: BusSearchQuery, ip?: string): Promise<BusSearchResult> {
+export async function searchBuses(q: BusSearchQuery & BusSearchIds, ip?: string): Promise<BusSearchResult> {
   if (process.env.BUS_LIVE !== "1") {
     return { buses: generateBuses(q), live: false, reason: "BUS_LIVE is off" };
   }
-  const originId = resolveCityId(q.from);
-  const destinationId = resolveCityId(q.to);
-  if (!originId || !destinationId) {
-    const missing = [!originId && q.from, !destinationId && q.to].filter(Boolean).join(", ");
-    console.warn(`[bdsd] no BDSD city id for: ${missing} — awaiting the city master list`);
-    return { buses: generateBuses(q), live: false, reason: `unmapped city: ${missing}` };
+  const origin = pickCityId(q.fromId, q.from);
+  const destination = pickCityId(q.toId, q.to);
+  if (!origin.id || !destination.id) {
+    // "ambiguous" means the name is shared by several ids — the picker has to
+    // send fromId/toId for those, we must never pick one at random.
+    const missing = [
+      !origin.id && `${q.from} (${origin.why})`,
+      !destination.id && `${q.to} (${destination.why})`,
+    ].filter(Boolean).join(", ");
+    console.warn(`[bdsd] could not resolve city to a BDSD id: ${missing}`);
+    return { buses: generateBuses(q), live: false, reason: `unresolved city: ${missing}` };
   }
+  const originId = String(origin.id);
+  const destinationId = String(destination.id);
   try {
     const data = await bdsdPost<BdsdSearchResponse>("/busservice/rest/search", {
       UserIp: userIp(ip),
