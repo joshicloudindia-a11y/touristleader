@@ -11,7 +11,7 @@ Built with **Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 ·
 npm install
 npx prisma generate
 npx prisma db push        # syncs schema to TiDB
-npm run dev               # http://localhost:3000
+npm run dev               # https://localhost:3001 (self-signed cert via mkcert)
 ```
 
 ## What's implemented (full flight workflow)
