@@ -12,6 +12,7 @@ import { useBooking, type ItineraryLeg } from "@/store/booking";
 import { useAuth } from "@/store/auth";
 import { InfoPopup } from "@/components/ui/InfoPopup";
 import { sourceMeta } from "@/lib/flight-source";
+import { FlightSourceBadge } from "@/components/FlightSourceBadge";
 import { FareCalendar } from "./FareCalendar";
 import { FilterPanel, DEFAULT_FILTERS, type Filters } from "./FilterPanel";
 import { FlightCard } from "./FlightCard";
@@ -285,7 +286,12 @@ export function SearchResults() {
           )}
           {!loading && (
             <>
-              <p className="text-sm text-slate-500">{filtered.length} flight{filtered.length !== 1 ? "s" : ""} found</p>
+              {/* One search is routed to a single supplier, so the whole list
+                  shares a badge — spell it out here as well as on each card. */}
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-slate-500">{filtered.length} flight{filtered.length !== 1 ? "s" : ""} found</p>
+                <FlightSourceBadge source={filtered[0]?.source} showLabel />
+              </div>
               {filtered.map((f) => (
                 <FlightCard key={f.id} flight={f} query={q!} />
               ))}

@@ -16,7 +16,7 @@ export function FlightSourceBadge({ source, className, showLabel = false }: { so
     <span
       title={`Booked from ${meta.label}`}
       className={cn(
-        "inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide ring-1",
+        "inline-flex shrink-0 items-center rounded px-1.5 py-[3px] text-[11px] font-bold uppercase leading-none tracking-wide ring-1",
         meta.cls,
         className
       )}

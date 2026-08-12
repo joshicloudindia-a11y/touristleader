@@ -25,13 +25,16 @@ export interface FlightSourceMeta {
   label: string;
   /** Booking-reference prefix — TLAM4K7QP2 reads as an Amadeus booking. */
   refPrefix: string;
-  /** Badge colours; distinct enough to tell apart in a long results list. */
+  /**
+   * Badge colours. Solid rather than tinted so the code is readable at a glance
+   * on a phone, where the chip sits next to the muted grey flight number.
+   */
   cls: string;
 }
 
 export const FLIGHT_SOURCES: Record<FlightSource, FlightSourceMeta> = {
-  AMADEUS: { code: "AM", label: "Amadeus", refPrefix: "TLAM", cls: "bg-indigo-50 text-indigo-700 ring-indigo-200" },
-  BENZY: { code: "AK", label: "Akbar", refPrefix: "TLAK", cls: "bg-teal-50 text-teal-700 ring-teal-200" },
+  AMADEUS: { code: "AM", label: "Amadeus", refPrefix: "TLAM", cls: "bg-indigo-600 text-white ring-indigo-700" },
+  BENZY: { code: "AK", label: "Akbar", refPrefix: "TLAK", cls: "bg-teal-600 text-white ring-teal-700" },
 };
 
 /** Fallback prefix for bookings with no flight supplier (hotel, bus, demo). */
