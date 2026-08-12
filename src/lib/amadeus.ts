@@ -207,6 +207,34 @@ function toIso(date: string, time: string): string {
 }
 
 /**
+ * Booking classes (RBDs) for one recommendation, in segment order.
+ *
+ * Air_Sell needs the RBD the fare was quoted in — the price on screen is only
+ * held for that class. FMPTB nests it per passenger type, so we read the first
+ * `paxFareProduct` (the adult) and take each `groupOfFares` in order; the Nth
+ * group corresponds to the Nth segment of the referenced flight group.
+ */
+function rbdsFromRecommendation(rec: string): string[] {
+  const pax = blocks(rec, "paxFareProduct")[0] || rec;
+  const details = blocks(pax, "fareDetails");
+  const out: string[] = [];
+  for (const fd of details) {
+    for (const gof of blocks(fd, "groupOfFares")) {
+      const prod = blocks(gof, "productInformation")[0] || gof;
+      const cabin = blocks(prod, "cabinProduct")[0] || prod;
+      const rbd = val(cabin, "rbd");
+      if (rbd) out.push(rbd);
+    }
+  }
+  return out;
+}
+
+/** ISO timestamp -> YYYY-MM-DD, as Air_Sell expects the departure date. */
+function isoDate(iso: string): string {
+  return /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(0, 10) : "";
+}
+
+/**
  * Parse an FMPTB response into Flight[]. Best-effort: returns [] on anything
  * unexpected so the caller falls back to generated data.
  */
@@ -255,12 +283,32 @@ function parseFmptb(xml: string, q: SearchQuery): Flight[] {
       const group = groups[ref - 1] || groups[i] || groups[0];
       if (!group) return;
 
-      const segs = group.segments;
+      // RBDs are positional against the group's segments; if the response gives
+      // fewer than expected the last one repeats (single-class recommendation).
+      const rbds = rbdsFromRecommendation(rec);
+      const segs = group.segments.map((s, si) => ({ ...s, bookingClass: rbds[si] || rbds[rbds.length - 1] || "" }));
       const first = segs[0], last = segs[segs.length - 1];
+
+      // Everything Air_Sell needs to re-sell exactly this itinerary at checkout.
+      // Built only when every segment resolved an RBD and a departure date —
+      // a partial ref would fail mid-sell, after the customer has paid.
+      const sellSegments = segs.map((s) => ({
+        from: s.from,
+        to: s.to,
+        departDate: isoDate(s.departTime),
+        carrier: s.airlineCode,
+        flightNumber: s.flightNumber.replace(/\D/g, ""),
+        bookingClass: s.bookingClass || "",
+        // One OD group per direction: segments returning toward the origin are leg 2.
+        group: q.tripType === "ROUND_TRIP" && s.from !== q.from && s.to === q.from ? 2 : 1,
+      }));
+      const bookable = sellSegments.every((s) => s.bookingClass && s.departDate && s.flightNumber && s.carrier);
+
       out.push({
         id: `AM-${i}-${first.flightNumber}`.replace(/\s+/g, ""),
         source: "AMADEUS",
         live: true,
+        bookingRef: bookable ? { supplier: "AMADEUS" as const, segments: sellSegments } : undefined,
         airlineCode: first.airlineCode,
         airlineName: first.airlineName,
         flightNumber: first.flightNumber,

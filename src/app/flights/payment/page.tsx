@@ -76,7 +76,10 @@ export default function PaymentPage() {
         }),
       });
       const data = await res.json();
-      if (data.bookingRef) {
+      // Only a ticketed booking reaches the confirmation page. A booking the
+      // airline has not ticketed comes back PENDING with a reference — the
+      // customer is told the truth here rather than shown "Booking Confirmed!".
+      if (res.ok && data.bookingRef && data.status !== "PENDING") {
         router.push(`/flights/confirmation?ref=${data.bookingRef}&pnr=${data.pnr}`);
       } else {
         setPayError(data.error || "Booking could not be completed. Please try again.");

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { genBookingRef, genPNR } from "@/lib/utils";
 import { DEMO_SOURCE, refPrefix, toFlightSource } from "@/lib/flight-source";
+import { issueTicket, SupplierBookingError, type IssuedTicket } from "@/lib/flight-booking";
 import { sendBookingEmail, bookingEmailHtml, hotelBookingEmailHtml, busBookingEmailHtml } from "@/lib/mailer";
 import { verifyPaymentSignature } from "@/lib/razorpay";
 import { getSessionUser, isAdmin } from "@/lib/auth";
@@ -130,9 +131,72 @@ export async function POST(req: NextRequest) {
     }
 
     const bookingRef = genBookingRef(flightRefPrefix(flight));
-    const pnr = genPNR();
     const lead = passengers?.[0]?.fullName || "Traveller";
     const sessionUser = await getSessionUser();
+
+    // ---- Ticket with the supplier BEFORE confirming anything ----------------
+    // The PNR must come from Amadeus / Benzy. If ticketing fails the money has
+    // already been taken, so the booking is parked as PENDING for staff to
+    // resolve and the customer is told plainly — never a generated PNR against
+    // a seat that was never sold.
+    let issued: IssuedTicket;
+    try {
+      issued = await issueTicket({
+        flight,
+        extraFlights,
+        passengers: Array.isArray(passengers) ? passengers : [],
+        travellers: query.travellers,
+        contactEmail,
+        contactPhone: contactPhone || "",
+        query,
+        receivedFrom: sessionUser?.email || undefined,
+      });
+    } catch (e) {
+      const err = e as SupplierBookingError;
+      console.error("[bookings] ticketing failed:", err.supplier, err.message);
+      await prisma.booking
+        .create({
+          data: {
+            userId: sessionUser?.id || null,
+            bookingRef,
+            pnr: null,
+            source: flightSource(flight),
+            status: "PENDING",
+            tripType: query.tripType,
+            passengerType: query.passengerType,
+            fareType: fare.id,
+            origin: flight.from,
+            destination: flight.to,
+            departDate: new Date(flight.departTime),
+            returnDate: query.returnDate ? new Date(query.returnDate) : null,
+            cabinClass: query.cabinClass,
+            adults: query.travellers.adults,
+            children: query.travellers.children,
+            infants: query.travellers.infants,
+            totalAmount: total || fare.price,
+            paymentSource: body.paymentSource || (razorpayPaymentId ? "razorpay" : "test"),
+            paymentId: razorpayPaymentId || null,
+            paymentOrderId: razorpayOrderId || null,
+            paymentStatus: (razorpayPaymentId || body.paymentSource === "wallet") ? "PAID" : "TEST",
+            contactEmail,
+            contactPhone: contactPhone || "",
+            flightData: extraFlights.length ? { ...flight, extraFlights } : flight,
+            passengers: Array.isArray(passengers) ? passengers : [],
+            supplierError: `${err.supplier}: ${err.message}`,
+          },
+        })
+        .catch((dbErr) => console.error("[bookings] could not park pending booking:", (dbErr as Error).message));
+
+      return NextResponse.json(
+        {
+          error: "We could not confirm your ticket with the airline. Your payment is safe and our team is completing the booking — reference " + bookingRef + ".",
+          bookingRef,
+          status: "PENDING",
+        },
+        { status: 502 },
+      );
+    }
+    const pnr = issued.pnr;
 
     // Combined per-passenger fare across every leg (return / multi-city), and the
     // adult/child/infant breakdown — the single source of truth for stored & emailed fares.
@@ -173,8 +237,13 @@ export async function POST(req: NextRequest) {
           userId: sessionUser?.id || null,
           bookingRef,
           pnr,
+          ticketNumbers: issued.ticketNumbers,
+          supplierRef: issued.supplierRef || null,
           source: flightSource(flight),
-          status: "CONFIRMED",
+          // Sold but not yet ticketed is a real supplier state (e.g. a hold);
+          // it is not a confirmed ticket, so it waits for staff rather than
+          // telling the customer they are ready to fly.
+          status: issued.ticketed ? "CONFIRMED" : "PENDING",
           tripType: query.tripType,
           passengerType: query.passengerType,
           fareType: fare.id,
@@ -209,6 +278,23 @@ export async function POST(req: NextRequest) {
     } catch (dbErr) {
       console.error("[bookings] DB save failed:", (dbErr as Error).message);
       saved = false;
+    }
+
+    // The supplier sold the seat but stopped short of issuing the ticket (a hold).
+    // The PNR is real and stored, but the customer is not ticketed — so no
+    // confirmation goes out and the journey ends with staff, not a "Confirmed!" page.
+    if (!issued.ticketed) {
+      await attributeAgentCommission(bookingRef, total || fare.price, Math.max(0, Number(body.agentMarkup) || 0));
+      return NextResponse.json(
+        {
+          error: `Your seat is held with the airline (PNR ${pnr}) but the ticket is still being issued. Our team is completing it — reference ${bookingRef}.`,
+          bookingRef,
+          pnr,
+          status: "PENDING",
+          saved,
+        },
+        { status: 202 },
+      );
     }
 
     // fire-and-forget email (full details)

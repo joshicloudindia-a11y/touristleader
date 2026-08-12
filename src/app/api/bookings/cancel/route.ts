@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth";
 import { walletTxn } from "@/lib/billing";
 import { refundPayment } from "@/lib/razorpay";
 import { sendCancellationEmail, bookingCancellationEmailHtml } from "@/lib/mailer";
+import { cancelWithSupplier, SupplierBookingError } from "@/lib/flight-booking";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,30 @@ export async function POST(req: NextRequest) {
   const booking = await prisma.booking.findFirst({ where: { bookingRef, userId: user.id } });
   if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   if (booking.status === "CANCELLED") return NextResponse.json({ error: "Already cancelled" }, { status: 400 });
+
+  // Release the seat with the airline FIRST. Refunding while the supplier still
+  // holds a ticketed seat would leave a live ticket nobody has paid for, so a
+  // failure here stops the cancellation instead of quietly refunding.
+  if (booking.bookingType === "FLIGHT" && booking.pnr) {
+    try {
+      await cancelWithSupplier({
+        supplier: booking.source,
+        pnr: booking.pnr,
+        ticketNumbers: Array.isArray(booking.ticketNumbers) ? (booking.ticketNumbers as string[]) : undefined,
+      });
+    } catch (e) {
+      const err = e as SupplierBookingError;
+      console.error("[cancel] supplier cancellation failed:", booking.source, err.message);
+      return NextResponse.json(
+        {
+          error:
+            "We could not cancel this ticket with the airline automatically. Our team has been notified and will complete your cancellation — your booking is unchanged for now.",
+          supplier: booking.source,
+        },
+        { status: 502 },
+      );
+    }
+  }
 
   const amount = Math.round(booking.totalAmount || 0);
   let refundMode: "wallet" | "razorpay" | "none" = "none";

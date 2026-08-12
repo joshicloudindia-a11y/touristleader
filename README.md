@@ -42,6 +42,13 @@ Responsive across mobile → desktop (mobile filter drawer, sticky summaries, fl
 
 ## ⚠️ Action items before going live
 
+0. **Turn on flight ticketing — `FLIGHT_BOOKING_LIVE=1`.** Checkout issues the PNR through the
+   supplier (`src/lib/flight-booking.ts` → Amadeus `runBookingFlow` / Benzy `runBookingFlow`);
+   nothing is generated locally. Ticketing spends real money — Amadeus issues an e-ticket and
+   Benzy's StartPay draws on the agent Deposit wallet — so it sits behind its own flag on top of
+   `AMADEUS_LIVE` / `BENZY_LIVE`, the same way `BUS_BOOKING_LIVE` guards the bus wallet.
+   **With the flag unset, every flight booking is refused** rather than confirmed with a fake PNR.
+   Set it only after one live ticket has been verified end to end against the certification host.
 1. **Whitelist the deployment's static IP with Benzy** (email `apisupport@benzyinfotech.com`,
    `Deepak@benzyinfotech.com`, cc `api@akbartravelsonline.com`, `Jyoti.varma@akbatravels.com`).
    Until then the app serves clearly-labelled *demo fares* and live calls are skipped gracefully.

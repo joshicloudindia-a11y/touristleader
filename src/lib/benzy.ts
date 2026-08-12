@@ -145,6 +145,8 @@ interface BenzyTrip {
 interface BenzyJourney {
   Provider?: string;
   AirlineCode?: string;
+  /** Journey handle, e.g. "6E|74" — required by SSR / SmartPricer / CreateItinerary. */
+  Index?: string;
   FlightNo?: string;
   Stops?: number;
   Duration?: string | number;
@@ -199,7 +201,9 @@ export async function searchFlights(q: SearchQuery): Promise<{ flights: Flight[]
       tries++;
     }
 
-    const flights = normalizeBenzyFlights(data, q);
+    // The master TUI is what every downstream booking call chains off, so it is
+    // captured onto each itinerary here — by checkout time the search is gone.
+    const flights = normalizeBenzyFlights(data, q, tui || data.TUI || "");
     if (flights.length) return { flights, live: true };
     console.warn("[benzy] live search returned 0 mapped flights, using fallback");
   } catch (err) {
@@ -231,7 +235,7 @@ function parseDuration(d: string | number | undefined): number {
  * Defensive against schema variants; returns [] on anything unexpected so the
  * caller falls back to generated data.
  */
-function normalizeBenzyFlights(data: SearchResponse, q: SearchQuery): Flight[] {
+function normalizeBenzyFlights(data: SearchResponse, q: SearchQuery, masterTui: string): Flight[] {
   const trips = data?.Trips;
   if (!Array.isArray(trips) || !trips.length) return [];
   const journeys = trips[0]?.Journey;
@@ -255,6 +259,9 @@ function normalizeBenzyFlights(data: SearchResponse, q: SearchQuery): Flight[] {
         id: `${airlineCode}${first.FlightNo || idx}-${idx}`,
         source: "BENZY",
         live: true,
+        // Bookable only with both halves: the search-wide TUI and this journey's
+        // Index. Missing either means no booking call can be made for this fare.
+        bookingRef: masterTui && j.Index ? { supplier: "BENZY" as const, tui: masterTui, index: j.Index, amount: base } : undefined,
         airlineCode,
         airlineName: airlineName(airlineCode),
         flightNumber: flightNo,

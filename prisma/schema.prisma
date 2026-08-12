@@ -118,6 +118,14 @@ model Booking {
   paymentStatus String   @default("PAID")
   contactEmail  String
   contactPhone  String
+  // --- Supplier ticketing (Amadeus / Benzy) ---
+  // `pnr` above holds the supplier's own record locator; these carry the rest of
+  // what the supplier returned, so a booking can be retrieved or cancelled with
+  // them later. `supplierError` is set when ticketing failed and the booking was
+  // parked as PENDING for staff — the customer has paid but holds no seat.
+  ticketNumbers Json?
+  supplierRef   String?  // Amadeus PNR / Benzy TransactionID
+  supplierError String?  @db.Text
   // raw Benzy payloads / itinerary snapshot
   flightData    Json?
   passengers    Json?

@@ -24,8 +24,15 @@ function parseQuery(sp: URLSearchParams): SearchQuery {
 
 export async function GET(req: NextRequest) {
   const q = parseQuery(req.nextUrl.searchParams);
-  // Amadeus (1A SOAP) is the primary flight provider when credentials are set;
-  // otherwise fall back to the Benzy client (which itself falls back to demo data).
-  const { flights, live } = amadeusConfigured() ? await amadeusSearch(q) : await benzySearch(q);
-  return NextResponse.json({ query: q, flights, calendar: fareCalendar(q), live });
+  // Amadeus (1A SOAP) is the primary provider when credentials are set. If it
+  // does not come back live, fall through to Benzy/Akbar rather than serving
+  // generated fares — previously Benzy was unreachable whenever Amadeus was
+  // configured, so AK results could never appear.
+  const primary = amadeusConfigured() ? await amadeusSearch(q) : await benzySearch(q);
+  let result = primary;
+  if (!primary.live && amadeusConfigured()) {
+    const secondary = await benzySearch(q);
+    if (secondary.live) result = secondary;
+  }
+  return NextResponse.json({ query: q, flights: result.flights, calendar: fareCalendar(q), live: result.live });
 }
