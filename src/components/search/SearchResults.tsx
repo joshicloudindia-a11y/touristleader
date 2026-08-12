@@ -11,7 +11,6 @@ import { useMoney } from "@/store/preferences";
 import { useBooking, type ItineraryLeg } from "@/store/booking";
 import { useAuth } from "@/store/auth";
 import { InfoPopup } from "@/components/ui/InfoPopup";
-import { sourceMeta } from "@/lib/flight-source";
 import { FlightSourceBadge } from "@/components/FlightSourceBadge";
 import { FareCalendar } from "./FareCalendar";
 import { FilterPanel, DEFAULT_FILTERS, type Filters } from "./FilterPanel";
@@ -245,7 +244,7 @@ export function SearchResults() {
       {data && !data.live && (
         <div className="mb-3">
           <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
-            Demo fares — live {sourceMeta(data.flights[0]?.source)?.label ?? "supplier"} API pending IP whitelist
+            Demo fares — live supplier API pending IP whitelist
           </span>
         </div>
       )}
@@ -287,10 +286,10 @@ export function SearchResults() {
           {!loading && (
             <>
               {/* One search is routed to a single supplier, so the whole list
-                  shares a badge — spell it out here as well as on each card. */}
+                  shares a badge, as does each card. */}
               <div className="flex items-center gap-2">
                 <p className="text-sm text-slate-500">{filtered.length} flight{filtered.length !== 1 ? "s" : ""} found</p>
-                <FlightSourceBadge source={filtered[0]?.source} showLabel />
+                <FlightSourceBadge source={filtered[0]?.source} />
               </div>
               {filtered.map((f) => (
                 <FlightCard key={f.id} flight={f} query={q!} />

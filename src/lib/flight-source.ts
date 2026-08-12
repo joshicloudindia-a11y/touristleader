@@ -21,7 +21,12 @@ export const DEMO_SOURCE = "DEMO";
 export interface FlightSourceMeta {
   /** Short code shown on screen, per the client's brief. */
   code: string;
-  /** Supplier name the way the client refers to it. */
+  /**
+   * Supplier name the way the client refers to it. Internal only — the client
+   * asked for the name to be off the customer-facing screens, so search,
+   * confirmation and the customer email show `code` alone. The admin bookings
+   * table is the one place a supplier is named.
+   */
   label: string;
   /** Booking-reference prefix — TLAM4K7QP2 reads as an Amadeus booking. */
   refPrefix: string;

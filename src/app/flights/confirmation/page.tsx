@@ -274,7 +274,7 @@ function Confirmation() {
               <p className="text-xs text-slate-400">Booking ID</p>
               <p className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
                 {ref}
-                <FlightSourceBadge source={flight?.source} showLabel />
+                <FlightSourceBadge source={flight?.source} />
               </p>
             </div>
             <div className="text-right">

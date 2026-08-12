@@ -597,7 +597,7 @@ export function bookingEmailHtml(data: {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">
       <tr><td style="padding:4px 0;color:#64748b">Travellers</td><td align="right" style="font-weight:600">${data.travellers}</td></tr>
       <tr><td style="padding:4px 0;color:#64748b">Baggage</td><td align="right" style="font-weight:600">Cabin ${data.cabinBaggage} &middot; Check-in ${data.checkInBaggage}</td></tr>
-      ${supplier ? `<tr><td style="padding:4px 0;color:#64748b">Booked from</td><td align="right" style="font-weight:600">${supplier.label} (${supplier.code})</td></tr>` : ""}
+      ${supplier ? `<tr><td style="padding:4px 0;color:#64748b">Booked from</td><td align="right" style="font-weight:600">${supplier.code}</td></tr>` : ""}
     </table>`;
 
   // Every traveller by name, with their type and any chosen seat / meal.
