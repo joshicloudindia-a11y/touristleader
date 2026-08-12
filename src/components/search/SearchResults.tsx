@@ -11,6 +11,7 @@ import { useMoney } from "@/store/preferences";
 import { useBooking, type ItineraryLeg } from "@/store/booking";
 import { useAuth } from "@/store/auth";
 import { InfoPopup } from "@/components/ui/InfoPopup";
+import { sourceMeta } from "@/lib/flight-source";
 import { FareCalendar } from "./FareCalendar";
 import { FilterPanel, DEFAULT_FILTERS, type Filters } from "./FilterPanel";
 import { FlightCard } from "./FlightCard";
@@ -242,7 +243,9 @@ export function SearchResults() {
     <div className="mx-auto max-w-7xl px-4 py-5">
       {data && !data.live && (
         <div className="mb-3">
-          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">Demo fares — live Akbar API pending IP whitelist</span>
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+            Demo fares — live {sourceMeta(data.flights[0]?.source)?.label ?? "supplier"} API pending IP whitelist
+          </span>
         </div>
       )}
 

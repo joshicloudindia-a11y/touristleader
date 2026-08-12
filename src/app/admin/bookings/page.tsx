@@ -12,8 +12,8 @@ const ICON: Record<string, React.ElementType> = { FLIGHT: Plane, HOTEL: BedDoubl
 
 // Which API/supplier produced the booking. Flights come from Akbar (Benzy Infotech) or Amadeus.
 const SOURCE_META: Record<string, { label: string; cls: string }> = {
-  AMADEUS: { label: "Amadeus", cls: "bg-emerald-100 text-emerald-700" },
-  BENZY: { label: "Akbar", cls: "bg-blue-100 text-blue-700" },
+  AMADEUS: { label: "Amadeus (AM)", cls: "bg-emerald-100 text-emerald-700" },
+  BENZY: { label: "Akbar (AK)", cls: "bg-blue-100 text-blue-700" },
   BDSD: { label: "BDSD", cls: "bg-indigo-100 text-indigo-700" },
   DEMO: { label: "Demo", cls: "bg-slate-100 text-slate-500" },
 };

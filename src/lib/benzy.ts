@@ -179,11 +179,11 @@ export async function searchFlights(q: SearchQuery): Promise<{ flights: Flight[]
   // is whitelisted the calls time out, so live attempts are gated behind a flag.
   // Set BENZY_LIVE=1 (once your IP is whitelisted) to enable real API calls.
   if (process.env.BENZY_LIVE !== "1") {
-    return { flights: generateFlights(q), live: false };
+    return { flights: generateFlights(q, "BENZY"), live: false };
   }
 
   const auth = await getSignature();
-  if (!auth) return { flights: generateFlights(q), live: false };
+  if (!auth) return { flights: generateFlights(q, "BENZY"), live: false };
 
   try {
     const body = buildSearchBody(q, auth.clientId);
@@ -205,7 +205,7 @@ export async function searchFlights(q: SearchQuery): Promise<{ flights: Flight[]
   } catch (err) {
     console.warn("[benzy] search failed, using fallback:", (err as Error).message);
   }
-  return { flights: generateFlights(q), live: false };
+  return { flights: generateFlights(q, "BENZY"), live: false };
 }
 
 function isCompleted(v: unknown) {
@@ -253,6 +253,8 @@ function normalizeBenzyFlights(data: SearchResponse, q: SearchQuery): Flight[] {
 
       out.push({
         id: `${airlineCode}${first.FlightNo || idx}-${idx}`,
+        source: "BENZY",
+        live: true,
         airlineCode,
         airlineName: airlineName(airlineCode),
         flightNumber: flightNo,

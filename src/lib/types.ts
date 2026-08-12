@@ -1,3 +1,5 @@
+import type { FlightSource } from "./flight-source";
+
 export type TripType = "ONE_WAY" | "ROUND_TRIP" | "MULTI_CITY" | "GROUP_BOOKING";
 export type CabinClass = "Economy" | "Premium" | "Business";
 export type FareTypeId = "REGULAR" | "FEE_SAVER" | "COMFORT" | "YOUR_CHOICE";
@@ -51,6 +53,10 @@ export interface FlightSegment {
 
 export interface Flight {
   id: string;
+  /** Supplier the search was routed to — drives the AK / AM badge. */
+  source: FlightSource;
+  /** True only when this itinerary came back from a live supplier API. */
+  live?: boolean;
   segments: FlightSegment[];
   airlineCode: string;
   airlineName: string;

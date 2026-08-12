@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { AIRPORTS } from "./constants";
 import { VISA_NOTE } from "./group";
+import { sourceMeta } from "./flight-source";
 import { LOGO_PNG_BASE64 } from "./logo-data";
 
 // Resolve to a *live* origin so the logo image actually loads in e-mail clients.
@@ -569,6 +570,8 @@ export function bookingEmailHtml(data: {
   passengerName: string; travellers: number; cabin: string; fareLabel: string;
   passengers?: { name: string; type: string; seat?: string; meal?: string }[];
   cabinBaggage: string; checkInBaggage: string;
+  /** Supplier the ticket was issued on — shown as "Akbar (AK)" / "Amadeus (AM)". */
+  source?: unknown;
   base: number; taxes: number; infantFare?: number; infants?: number; addOns: number; convenience: number; total: number;
 }) {
   const fromCity = cityName(data.origin), toCity = cityName(data.destination);
@@ -589,10 +592,12 @@ export function bookingEmailHtml(data: {
       </td></tr>
     </table>`;
 
+  const supplier = sourceMeta(data.source);
   const details = `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">
       <tr><td style="padding:4px 0;color:#64748b">Travellers</td><td align="right" style="font-weight:600">${data.travellers}</td></tr>
       <tr><td style="padding:4px 0;color:#64748b">Baggage</td><td align="right" style="font-weight:600">Cabin ${data.cabinBaggage} &middot; Check-in ${data.checkInBaggage}</td></tr>
+      ${supplier ? `<tr><td style="padding:4px 0;color:#64748b">Booked from</td><td align="right" style="font-weight:600">${supplier.label} (${supplier.code})</td></tr>` : ""}
     </table>`;
 
   // Every traveller by name, with their type and any chosen seat / meal.

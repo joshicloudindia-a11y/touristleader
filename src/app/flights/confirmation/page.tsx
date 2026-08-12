@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { InfoPopup } from "@/components/ui/InfoPopup";
 import { Modal } from "@/components/ui/Modal";
 import { FlightSummaryCard } from "@/components/booking/FlightSummaryCard";
+import { FlightSourceBadge } from "@/components/FlightSourceBadge";
 import { useBooking } from "@/store/booking";
 import { useBilling } from "@/lib/useBilling";
 import { CABS, AIRPORT_SERVICES, AIRPORTS, MEALS } from "@/lib/constants";
@@ -271,7 +272,10 @@ function Confirmation() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-slate-200 pb-4">
             <div>
               <p className="text-xs text-slate-400">Booking ID</p>
-              <p className="text-lg font-extrabold text-slate-900">{ref}</p>
+              <p className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
+                {ref}
+                <FlightSourceBadge source={flight?.source} showLabel />
+              </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-400">PNR</p>

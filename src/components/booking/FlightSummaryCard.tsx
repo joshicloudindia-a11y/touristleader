@@ -2,6 +2,7 @@
 import { Plane } from "lucide-react";
 import { useBooking } from "@/store/booking";
 import { AirlineLogo } from "@/components/AirlineLogo";
+import { FlightSourceBadge } from "@/components/FlightSourceBadge";
 import { formatTime, formatDuration, formatDate } from "@/lib/utils";
 import type { Flight, FareOption } from "@/lib/types";
 
@@ -18,7 +19,10 @@ function Leg({ flight, fare, label }: { flight: Flight; fare: FareOption | null;
       <div className="flex items-center gap-3">
         <AirlineLogo code={flight.airlineCode} size={40} />
         <div className="flex-1">
-          <p className="font-bold text-slate-900">{flight.airlineName} <span className="text-xs font-normal text-slate-400">{flight.flightNumber}</span></p>
+          <p className="flex items-center gap-1.5 font-bold text-slate-900">
+            {flight.airlineName} <span className="text-xs font-normal text-slate-400">{flight.flightNumber}</span>
+            <FlightSourceBadge source={flight.source} />
+          </p>
           <p className="text-xs text-slate-500">{formatDate(flight.departTime)}</p>
         </div>
         {fare && <span className="rounded-full bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand">{fare.label}</span>}

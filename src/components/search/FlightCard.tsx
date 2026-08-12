@@ -6,6 +6,7 @@ import type { Flight, FareOption } from "@/lib/types";
 import { FARE_TYPES } from "@/lib/constants";
 import { cn, formatTime, formatDuration } from "@/lib/utils";
 import { AirlineLogo } from "@/components/AirlineLogo";
+import { FlightSourceBadge } from "@/components/FlightSourceBadge";
 import { Button } from "@/components/ui/Button";
 import { useMoney } from "@/store/preferences";
 import { useBooking } from "@/store/booking";
@@ -62,7 +63,10 @@ export function FlightCard({ flight, query, onPick, selected, selectedFareId }: 
           <AirlineLogo code={flight.airlineCode} size={40} />
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-slate-900">{flight.airlineName}</p>
-            <p className="text-xs text-slate-400">{flight.flightNumber}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs text-slate-400">{flight.flightNumber}</p>
+              <FlightSourceBadge source={flight.source} />
+            </div>
           </div>
         </div>
 

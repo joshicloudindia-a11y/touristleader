@@ -259,6 +259,8 @@ function parseFmptb(xml: string, q: SearchQuery): Flight[] {
       const first = segs[0], last = segs[segs.length - 1];
       out.push({
         id: `AM-${i}-${first.flightNumber}`.replace(/\s+/g, ""),
+        source: "AMADEUS",
+        live: true,
         airlineCode: first.airlineCode,
         airlineName: first.airlineName,
         flightNumber: first.flightNumber,
@@ -291,12 +293,12 @@ function parseFmptb(xml: string, q: SearchQuery): Flight[] {
 export async function searchFlights(q: SearchQuery): Promise<{ flights: Flight[]; live: boolean }> {
   // Live calls require the credentials AND an explicit AMADEUS_LIVE=1 switch
   // (so dev/preview never hits the live GDS by accident). Otherwise demo data.
-  if (!amadeusConfigured() || !cfg.forceLive) return { flights: generateFlights(q), live: false };
+  if (!amadeusConfigured() || !cfg.forceLive) return { flights: generateFlights(q, "AMADEUS"), live: false };
   try {
     const xml = await soapCall(cfg.searchAction, buildFmptbRequest(q));
     if (/<(?:\w+:)?Fault\b/.test(xml)) {
       console.warn("[amadeus] SOAP fault:", val(xml, "faultstring") || val(xml, "Reason") || "unknown");
-      return { flights: generateFlights(q), live: false };
+      return { flights: generateFlights(q, "AMADEUS"), live: false };
     }
     const flights = parseFmptb(xml, q);
     if (flights.length) return { flights, live: true };
@@ -304,7 +306,7 @@ export async function searchFlights(q: SearchQuery): Promise<{ flights: Flight[]
   } catch (err) {
     console.warn("[amadeus] search failed, using fallback:", (err as Error).message);
   }
-  return { flights: generateFlights(q), live: false };
+  return { flights: generateFlights(q, "AMADEUS"), live: false };
 }
 
 // ---------------------------------------------------------------------------

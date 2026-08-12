@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { genBookingRef, genPNR } from "@/lib/utils";
+import { DEMO_SOURCE, refPrefix, toFlightSource } from "@/lib/flight-source";
 import { sendBookingEmail, bookingEmailHtml, hotelBookingEmailHtml, busBookingEmailHtml } from "@/lib/mailer";
 import { verifyPaymentSignature } from "@/lib/razorpay";
 import { getSessionUser, isAdmin } from "@/lib/auth";
@@ -14,13 +15,24 @@ export const dynamic = "force-dynamic";
 
 /**
  * Which API/data source produced this booking, for display in the admin panel.
- * A live Amadeus response tags flights with an "AM-" id; otherwise we fall back
- * to the provider's live flag (else demo data). Hotels use Benzy, bus uses BDSD.
+ * The search response tags every itinerary with the supplier it was routed to
+ * (`source`) and whether it came from a real API call (`live`); only a live one
+ * is recorded against the supplier, so demo fares stay marked DEMO.
+ * Hotels use Benzy, bus uses BDSD.
  */
-function flightSource(flight: { id?: string } | null | undefined): string {
-  if (typeof flight?.id === "string" && flight.id.startsWith("AM-")) return "AMADEUS";
-  if (process.env.BENZY_LIVE === "1") return "BENZY";
-  return "DEMO";
+function flightSource(flight: { source?: unknown; live?: unknown } | null | undefined): string {
+  const supplier = toFlightSource(flight?.source);
+  if (supplier && flight?.live === true) return supplier;
+  return DEMO_SOURCE;
+}
+
+/**
+ * Supplier the itinerary was routed to, used for the TLAK / TLAM booking
+ * reference. Unlike `flightSource()` this does not require a live response —
+ * the reference should still say which desk the booking belongs to.
+ */
+function flightRefPrefix(flight: { source?: unknown } | null | undefined): string {
+  return refPrefix(flight?.source);
 }
 const hotelSource = () => (process.env.BENZY_LIVE === "1" ? "BENZY" : "DEMO");
 const busSource = () => (process.env.BUS_LIVE === "1" ? "BDSD" : "DEMO");
@@ -117,7 +129,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Payment verification failed" }, { status: 400 });
     }
 
-    const bookingRef = genBookingRef();
+    const bookingRef = genBookingRef(flightRefPrefix(flight));
     const pnr = genPNR();
     const lead = passengers?.[0]?.fullName || "Traveller";
     const sessionUser = await getSessionUser();
@@ -227,6 +239,7 @@ export async function POST(req: NextRequest) {
           meal: MEALS.find((m) => m.id === p.meal)?.label || "",
         })),
         cabinBaggage: flight.cabinBaggage || "7 kg", checkInBaggage: flight.checkInBaggage || "15 kg",
+        source: flight.source,
         base: fb.base, taxes: fb.taxes, infantFare: fb.infantTotal, infants: fb.infants,
         addOns: addOnsAmt, convenience, total: grand,
       }),

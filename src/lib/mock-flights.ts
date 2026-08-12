@@ -1,5 +1,6 @@
 import { AIRLINES, FARE_TYPES } from "./constants";
 import type { Flight, FareOption, FareTypeId, SearchQuery } from "./types";
+import type { FlightSource } from "./flight-source";
 
 // Deterministic-ish pseudo random based on a string seed (stable per route+date)
 function seeded(seed: string) {
@@ -37,7 +38,13 @@ function buildFares(base: number): FareOption[] {
   });
 }
 
-export function generateFlights(q: SearchQuery): Flight[] {
+/**
+ * Stand-in fares for when a supplier API is unreachable. `source` is the
+ * supplier the search was routed to, so the AK / AM badge stays correct while
+ * the live APIs are still behind their IP whitelist; `live` is left false so
+ * nothing downstream mistakes these for real inventory.
+ */
+export function generateFlights(q: SearchQuery, source: FlightSource = "BENZY"): Flight[] {
   const rand = seeded(`${q.from}-${q.to}-${q.departDate}`);
   const day = q.departDate;
   const flights: Flight[] = [];
@@ -62,6 +69,8 @@ export function generateFlights(q: SearchQuery): Flight[] {
 
     flights.push({
       id: `${airline.code}${flightNo.replace(/\s/g, "")}-${i}`,
+      source,
+      live: false,
       airlineCode: airline.code,
       airlineName: airline.name,
       flightNumber: flightNo,
